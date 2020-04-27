@@ -68,7 +68,9 @@ def get_resource(resource_name):
             RESOURCES_DEFINED[resource_name] = resource_obj
             return resource_obj
     except FileNotFoundError:
-        handle_new_resource(resource_name)
+        new_resource = handle_new_resource(resource_name)
+        RESOURCES_DEFINED[resource_name] = new_resource
+        return new_resource
 
 
 class CompositeResource(BasicResource):
