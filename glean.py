@@ -24,6 +24,7 @@ RESOURCES_DEFINED = dict()
 
 
 class BasicResource:
+    "Definition: A resource that cannot be divided futher, and has no dependencies."
     __res_type__ = BASIC
 
     def __init__(self, resource_name):
@@ -45,8 +46,12 @@ class BasicResource:
     def __str__(self):
         return self.resource_name
 
+    def __hash__(self):
+        return hash(self.resource_name)
 
-def deserialize(self, resource_name, data):
+
+def deserialize(self, resource_name, data: dict):
+    "dict -> BasicResource/CompositeResource as appropriate."
     if data is None:
         return BasicResource(resource_name)
     else:
@@ -54,6 +59,7 @@ def deserialize(self, resource_name, data):
 
 
 def get_resource(resource_name):
+    "By only fetching resources through this method, single instance is ensured."
     try:
         return RESOURCES_DEFINED[resource_name]
     except KeyError:
@@ -66,6 +72,8 @@ def get_resource(resource_name):
 
 
 class CompositeResource(BasicResource):
+    "Anything that cannot qualify as a BasicResource"
+
     def __init__(self, resource_name, _dependencies):
         super().__init__(resource_name)
         self._dependencies = _dependencies
@@ -78,9 +86,6 @@ class CompositeResource(BasicResource):
             (get_resource(resource_name), self._dependencies[resource_name])
             for resource_name in self._dependencies.keys()
         )
-
-    def __hash__(self):
-        return hash(self.resource_name)
 
     def get_BOM(self, q=1):
         BOM = Counter()
@@ -95,6 +100,7 @@ class CompositeResource(BasicResource):
 
 
 def from_file(filename):
+    "Retrieves stored resources. Because of the way filesystems work, single resource name is guaranteed."
     resource_name = re.sub(r"(.*)\.json$").group(1)
     with open(filename) as file:
         _dependencies = json.load(file)
@@ -105,6 +111,7 @@ def from_file(filename):
 
 
 def dump_all():
+    "Don't waste my time having to re-enter values"
     for resource in RESOURCES_DEFINED.values():
         if not resource.defined:
             resource.save()
@@ -114,6 +121,7 @@ atexit.register(dump_all)
 
 
 def _build_plan(resource, top_quantity, level, hierarchy):
+    "Helper"
     c = Counter()
     c[resource] += top_quantity
     hierarchy[resource] = max(level, hierarchy[resource])
@@ -129,6 +137,7 @@ def _build_plan(resource, top_quantity, level, hierarchy):
 
 
 def build_plan(resource, quantity):
+    "Order in which to build resources and in what quantity to achieve the end goal"
     hierarchy = dict()
     b = _build_plan(resource, quantity, 0, hierarchy)
     parts = ((key, value) for key, value in b.items())
