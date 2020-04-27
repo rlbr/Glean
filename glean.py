@@ -9,7 +9,6 @@ import readline
 from cmd2 import Cmd, with_argparser
 import appdirs
 
-# Class definition
 GLEAN_DIRS = appdirs.AppDirs("glean")
 BASIC = 0
 hist_file = os.path.join(GLEAN_DIRS.user_state_dir, "history")
