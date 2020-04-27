@@ -1,12 +1,14 @@
 from argparse import ArgumentParser
 from collections import Counter
 import atexit
+import curses
 import json
 import os
 import re
 import readline
 
 from cmd2 import Cmd, with_argparser
+from npyscreen import GridColTitles, ActionFormV2, Popup, FormMuttActive
 import appdirs
 
 GLEAN_DIRS = appdirs.AppDirs("glean")
@@ -144,6 +146,37 @@ def build_plan(resource, quantity):
     b = _build_plan(resource, quantity, 0, hierarchy)
     parts = ((key, value) for key, value in b.items())
     return sorted(parts, key=lambda part: hierarchy[part[0]])
+
+
+class MyGrid(GridColTitles):
+    X = 1
+    Y = 0
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, col_titles=["Resource", "Quantity"], **kwargs)
+        self.add_handlers({curses.KEY_ENTER, self.change_cell})
+        super().set_up_handlers
+
+    def change_cell(self):
+        if self.edit_cell[MyGrid.X] == 0:
+            pass
+        else:
+            pass
+
+    def to_dict(self):
+        rows = ((str(r), int(q)) for r, q in self.values)
+        return dict(rows)
+
+
+class ModifyResourceForm(ActionFormV2):
+    pass
+
+
+class SelectionPopup(FormMuttActive):
+    DEFAULT_LINES = 12
+    DEFAULT_COLUMNS = 60
+    SHOW_ATX = 10
+    SHOW_ATY = 2
 
 
 def handle_new_resource(resource_name):
