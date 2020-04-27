@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 from collections import Counter
 import atexit
 import json
@@ -5,7 +6,7 @@ import os
 import re
 import readline
 
-from cmd2 import Cmd
+from cmd2 import Cmd, with_argparser
 import appdirs
 
 # Class definition
@@ -63,10 +64,6 @@ def get_resource(resource_name):
             return resource_obj
     except FileNotFoundError:
         handle_new_resource(resource_name)
-
-
-def handle_new_resource(resource_name):
-    pass
 
 
 class CompositeResource(BasicResource):
@@ -139,21 +136,49 @@ def build_plan(resource, quantity):
     return sorted(parts, key=lambda part: hierarchy[part[0]])
 
 
+def handle_new_resource(resource_name):
+    pass
+
+
+def handle_change_resource(resource_name):
+    pass
+
+
+list_parser = ArgumentParser()
+
+build_guide_parser = ArgumentParser()
+build_guide_parser.add_argument("resource_name", help="The resource, no spaces please.")
+
+bom_parser = ArgumentParser()
+bom_parser.add_argument("resource_name", help="The resource, no spaces please.")
+
+add_parser = ArgumentParser()
+add_parser.add_argument("resource_name", help="The resource, no spaces please.")
+
+modify_parser = ArgumentParser()
+modify_parser.add_argument("resource_name", help="The resource, no spaces please.")
+
+
 class MainLoop(Cmd):
+    @with_argparser(list_parser)
     def do_list(self, args):
         pass
 
+    @with_argparser(build_guide_parser)
     def do_build_guide(self, args):
         pass
 
+    @with_argparser(bom_parser)
     def do_bom(self, args):
         pass
 
+    @with_argparser(add_parser)
     def do_add(self, args):
         handle_new_resource(args.resource_name)
 
+    @with_argparser(modify_parser)
     def do_modify(self, args):
-        pass
+        handle_change_resource(args.resource_name)
 
 
 if __name__ == "__main__":
