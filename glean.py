@@ -56,7 +56,8 @@ class BasicResource:
         global RESOURCES_DEFINED
         RESOURCES_DEFINED[self.resource_name] = self
 
-def deserialize(self, resource_name, data: dict):
+
+def deserialize(resource_name, data: dict):
     "dict -> BasicResource/CompositeResource as appropriate."
     if data is None:
         return BasicResource(resource_name)
@@ -76,14 +77,15 @@ def get_resource(resource_name):
     try:
         return RESOURCES_DEFINED[resource_name]
     except KeyError:
-        with open("f{resource_name}.json") as file:
-            resource_obj = deserialize(json.load(file))
-            RESOURCES_DEFINED[resource_name] = resource_obj
-            return resource_obj
-    except FileNotFoundError:
-        new_resource = handle_new_resource(resource_name)
-        new_resource.register()
-        return new_resource
+        try:
+            with open(os.path.join(RESOURCES_DIR, f"{resource_name}.json")) as file:
+                resource_obj = deserialize(resource_name, json.load(file))
+                RESOURCES_DEFINED[resource_name] = resource_obj
+                return resource_obj
+        except FileNotFoundError:
+            new_resource = handle_new_resource(resource_name)
+            new_resource.register()
+            return new_resource
 
 
 class CompositeResource(BasicResource):
