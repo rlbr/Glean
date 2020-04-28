@@ -132,13 +132,13 @@ def _build_plan(resource, top_quantity, level, hierarchy):
     "Helper"
     c = Counter()
     c[resource] += top_quantity
-    hierarchy[resource] = max(level, hierarchy[resource])
+    hierarchy[resource] = max(level, hierarchy.get(resource, level))
     if type(resource) == BasicResource:
         return c
     else:
         for dependency, quantity in resource.dependencies:
             sub_count = _build_plan(
-                resource, quantity * top_quantity, level + 1, hierarchy
+                dependency, quantity * top_quantity, level + 1, hierarchy
             )
             c.update(sub_count)
         return c
@@ -149,7 +149,7 @@ def build_plan(resource, quantity):
     hierarchy = dict()
     b = _build_plan(resource, quantity, 0, hierarchy)
     parts = ((key, value) for key, value in b.items())
-    return sorted(parts, key=lambda part: hierarchy[part[0]])
+    return sorted(parts, key=lambda part: hierarchy[part[0]], reverse=True)
 
 
 class MyGrid(GridColTitles):
