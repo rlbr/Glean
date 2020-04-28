@@ -8,19 +8,20 @@ import re
 import readline
 
 from cmd2 import Cmd, with_argparser
-from npyscreen import GridColTitles, ActionFormV2, Popup, FormMuttActive
+from npyscreen import GridColTitles, ActionFormV2, FormMuttActive
 import appdirs
 
 GLEAN_DIRS = appdirs.AppDirs("glean")
 BASIC = 0
+os.makedirs(GLEAN_DIRS.user_state_dir, exist_ok=True)
 hist_file = os.path.join(GLEAN_DIRS.user_state_dir, "history")
 if not os.path.exists(hist_file):
     with open(hist_file, "w") as fobj:
         fobj.write("")
 readline.read_history_file(hist_file)
 atexit.register(readline.write_history_file, hist_file)
-RESOURCES_DIR = os.path.join(GLEAN_DIRS.site_data_dir, "resources")
-os.makedirs(RESOURCES_DIR, exists_ok=True)
+RESOURCES_DIR = os.path.join(GLEAN_DIRS.user_data_dir, "resources")
+os.makedirs(RESOURCES_DIR, exist_ok=True)
 
 RESOURCES_DEFINED = dict()
 
@@ -116,6 +117,7 @@ def from_file(filename):
 
 def dump_all():
     "Don't waste my time having to re-enter values"
+    global RESOURCES_DEFINED
     for resource in RESOURCES_DEFINED.values():
         if not resource.defined:
             resource.save()
