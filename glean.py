@@ -201,9 +201,15 @@ list_parser.add_argument(
 
 build_guide_parser = ArgumentParser()
 build_guide_parser.add_argument("resource_name", help="The resource, no spaces please.")
+build_guide_parser.add_argument(
+    "-q", "--quantity", action="store", type=int, default=1, help="How many to make"
+)
 
 bom_parser = ArgumentParser()
 bom_parser.add_argument("resource_name", help="The resource, no spaces please.")
+bom_parser.add_argument(
+    "-q", "--quantity", action="store", type=int, default=1, help="How many to make"
+)
 
 add_parser = ArgumentParser()
 add_parser.add_argument("resource_name", help="The resource, no spaces please.")
@@ -238,11 +244,14 @@ class MainLoop(Cmd):
 
     @with_argparser(build_guide_parser)
     def do_build_guide(self, args):
-        pass
+        items = build_plan(get_resource(args.resource_name), args.quantity)
+        print("\n".join(f"{item}: {quantity:,}" for item, quantity in items))
 
     @with_argparser(bom_parser)
     def do_bom(self, args):
-        pass
+        bom = get_resource(args.resource_name).get_BOM(args.quantity)
+        items = sorted(bom.items(), key=lambda pair: pair[0])
+        print("\n".join(f"{item}: {quantity:,}" for item, quantity in items))
 
     @with_argparser(add_parser)
     def do_add(self, args):
