@@ -191,6 +191,12 @@ def handle_change_resource(resource_name):
 
 
 list_parser = ArgumentParser()
+list_parser.add_argument(
+    "-f",
+    "--filter",
+    action="store_true",
+    help="input a lambda function to filter resource types (re is imported)",
+)
 
 build_guide_parser = ArgumentParser()
 build_guide_parser.add_argument("resource_name", help="The resource, no spaces please.")
@@ -222,7 +228,13 @@ class MainLoop(Cmd):
 
     @with_argparser(list_parser)
     def do_list(self, args):
-        pass
+        all_resources = (
+            get_resource(resource_name) for resource_name in get_resource_list()
+        )
+        if args.filter:
+            key = eval(input("Lambda expr: "))
+            all_resources = filter(key, all_resources)
+        print("\n".join(resource.resource_name for resource in all_resources))
 
     @with_argparser(build_guide_parser)
     def do_build_guide(self, args):
