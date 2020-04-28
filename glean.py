@@ -98,6 +98,7 @@ class CompositeResource(BasicResource):
     def serialize(self):
         return self._dependencies
 
+    @property
     def dependencies(self):
         return (
             (get_resource(resource_name), self._dependencies[resource_name])
