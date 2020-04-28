@@ -4,7 +4,6 @@ import atexit
 import curses
 import json
 import os
-import re
 import readline
 
 from cmd2 import Cmd, with_argparser
@@ -52,6 +51,9 @@ class BasicResource:
     def __hash__(self):
         return hash(self.resource_name)
 
+    def register(self):
+        global RESOURCES_DEFINED
+        RESOURCES_DEFINED[self.resource_name] = self
 
 def deserialize(self, resource_name, data: dict):
     "dict -> BasicResource/CompositeResource as appropriate."
@@ -72,7 +74,7 @@ def get_resource(resource_name):
             return resource_obj
     except FileNotFoundError:
         new_resource = handle_new_resource(resource_name)
-        RESOURCES_DEFINED[resource_name] = new_resource
+        new_resource.register()
         return new_resource
 
 
@@ -194,6 +196,19 @@ modify_parser.add_argument("resource_name", help="The resource, no spaces please
 
 
 class MainLoop(Cmd):
+    def resource_completer(self, text, line, start_index, end_index):
+        resources = RESOURCES_DEFINED.keys()
+        if text:
+            return [resource for resource in resources if resource.startswith(text)]
+        else:
+            return list(resources)
+
+    complete_list = resource_completer
+    complete_build_guide = resource_completer
+    complete_bom = resource_completer
+    complete_add = resource_completer
+    complete_modify = resource_completer
+
     @with_argparser(list_parser)
     def do_list(self, args):
         pass
