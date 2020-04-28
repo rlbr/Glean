@@ -223,7 +223,6 @@ class MainLoop(Cmd):
     complete_list = resource_completer
     complete_build_guide = resource_completer
     complete_bom = resource_completer
-    complete_add = resource_completer
     complete_modify = resource_completer
 
     @with_argparser(list_parser)
