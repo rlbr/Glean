@@ -104,17 +104,6 @@ class CompositeResource(BasicResource):
         return BOM
 
 
-def from_file(filename):
-    "Retrieves stored resources. Because of the way filesystems work, single resource name is guaranteed."
-    resource_name = re.sub(r"(.*)\.json$").group(1)
-    with open(filename) as file:
-        _dependencies = json.load(file)
-        if _dependencies is None:
-            return BasicResource(resource_name)
-        else:
-            return CompositeResource
-
-
 def dump_all():
     "Don't waste my time having to re-enter values"
     global RESOURCES_DEFINED
