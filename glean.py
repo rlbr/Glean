@@ -4,6 +4,7 @@ import atexit
 import curses
 import json
 import os
+import re
 import readline
 
 from cmd2 import Cmd, with_argparser
@@ -61,6 +62,13 @@ def deserialize(self, resource_name, data: dict):
         return BasicResource(resource_name)
     else:
         return CompositeResource(resource_name, data)
+
+
+def get_resource_list():
+    file_resources = (
+        re.sub(".json$", "", filename) for filename in os.listdir(RESOURCES_DIR)
+    )
+    return sorted(set(RESOURCES_DEFINED.keys()) | set(file_resources))
 
 
 def get_resource(resource_name):
@@ -197,7 +205,8 @@ modify_parser.add_argument("resource_name", help="The resource, no spaces please
 
 class MainLoop(Cmd):
     def resource_completer(self, text, line, start_index, end_index):
-        resources = RESOURCES_DEFINED.keys()
+
+        resources = get_resource_list()
         if text:
             return [resource for resource in resources if resource.startswith(text)]
         else:
