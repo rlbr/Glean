@@ -249,6 +249,10 @@ modify_parser = ArgumentParser()
 modify_parser.add_argument("resource_name", help="The resource, no spaces please.")
 
 
+detail_parser = ArgumentParser()
+detail_parser.add_argument("resource_name", help="The resource, no spaces please.")
+
+
 class MainLoop(Cmd):
     def resource_completer(self, text, line, start_index, end_index):
 
@@ -262,6 +266,7 @@ class MainLoop(Cmd):
     complete_build_guide = resource_completer
     complete_bom = resource_completer
     complete_modify = resource_completer
+    complete_detail = resource_completer
 
     @with_argparser(list_parser)
     def do_list(self, args):
@@ -292,6 +297,23 @@ class MainLoop(Cmd):
     @with_argparser(modify_parser)
     def do_modify(self, args):
         handle_change_resource(args.resource_name)
+
+    @with_argparser(detail_parser)
+    def do_detail(self, args):
+        if args.resource_name not in get_resource_list():
+            print(f"No such resource {args.resource_name}")
+            return
+        resource = get_resource(args.resource_name)
+        print(resource.resource_name)
+        if type(resource) == CompositeResource:
+            print(
+                "\n".join(
+                    f"|_ {resource_name}: {quantity:,}"
+                    for resource_name, quantity in resource._dependencies.items()
+                )
+            )
+        else:
+            print("Basic Resource")
 
 
 if __name__ == "__main__":
