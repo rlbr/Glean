@@ -232,7 +232,6 @@ class EditApp(npyscreen.NPSAppManaged):
 
     def return_resource(self):
         self.run()
-        print(self.shared_state)
         if self.shared_state["intent"] == "save":
             if len(self.dependencies_as_list) == 0:
                 res = BasicResource(self.resource_name)
