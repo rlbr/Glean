@@ -12,6 +12,7 @@ import readline
 from cmd2 import Cmd, with_argparser
 import appdirs
 import npyscreen
+import time
 
 GLEAN_DIRS = appdirs.AppDirs("glean")
 BASIC = 0
@@ -185,16 +186,17 @@ def build_plan(resource, quantity):
 
 
 def handle_new_resource(resource_name):
+    time.sleep(0.5)
     app_instance = EditApp(resource_name, dict(), defined_resources=get_resource_list())
     future = EXECUTOR.submit(app_instance.return_resource)
-    future.result()
-    new_resource = future.result()
+    new_resource = future.result(60)
     if new_resource is not None:
         new_resource.register()
         return new_resource
 
 
 def handle_change_resource(resource_name):
+    time.sleep(0.5)
     old_resource = get_resource(resource_name)
     if type(old_resource) == CompositeResource:
         app_instance = EditApp(
@@ -207,7 +209,7 @@ def handle_change_resource(resource_name):
             old_resource.resource_name, defined_resources=get_resource_list
         )
     future = EXECUTOR.submit(app_instance.return_resource)
-    new_resource = future.result()
+    new_resource = future.result(60)
     if new_resource is not None:
         new_resource.register()
         return new_resource
@@ -338,7 +340,7 @@ class TitleResourceField(npyscreen.TitleText):
 class ResourceSelectionForm(npyscreen.ActionFormV2):
     DEFAULT_LINES = 12
     DEFAULT_COLUMNS = 60
-    SHOW_ATX = 10
+    SHOW_ATX = 60
     SHOW_ATY = 2
 
     @property
