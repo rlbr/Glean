@@ -236,6 +236,9 @@ bom_parser.add_argument("resource_name", help="The resource, no spaces please.")
 bom_parser.add_argument(
     "-q", "--quantity", action="store", type=int, default=1, help="How many to make"
 )
+bom_parser.add_argument(
+    "-f", "--force-update", action="store_true", help="Force fresh calculation of bom"
+)
 
 add_parser = ArgumentParser()
 add_parser.add_argument("resource_name", help="The resource, no spaces please.")
@@ -275,8 +278,9 @@ class MainLoop(Cmd):
 
     @with_argparser(bom_parser)
     def do_bom(self, args):
-        bom = get_resource(args.resource_name).get_BOM(args.quantity)
-        items = sorted(bom.items(), key=lambda pair: pair[0])
+        bom = get_resource(args.resource_name).get_BOM(args.quantity, args.force_update)
+        prelim_items = ((k.resource_name, v) for k, v in bom.items())
+        items = sorted(prelim_items, key=lambda pair: pair[0])
         print("\n".join(f"{item}: {quantity:,}" for item, quantity in items))
 
     @with_argparser(add_parser)
