@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from collections import Counter
+import collections
 import atexit
 import curses
 import json
@@ -88,33 +88,59 @@ def get_resource(resource_name):
             return new_resource
 
 
+class BillOfMaterials(collections.defaultdict):
+    def __init__(self, *arg, **kwargs):
+        super().__init__(None, *arg, **kwargs)
+
+    def __missing__(self, key):
+        return 0
+
+    def __hash__(self):
+        return hash(tuple(self.items()))
+
+    def __mul__(self, other):
+        ret = BillOfMaterials()
+        for k, v in self.items():
+            ret[k] = v * other
+        return ret
+
+    def __add__(self, other):
+
+        merged = BillOfMaterials(self)
+        for k, v in other.items():
+            merged[k] += v
+        return BillOfMaterials(merged)
+
+
 class CompositeResource(BasicResource):
     "Anything that cannot qualify as a BasicResource"
 
     def __init__(self, resource_name, _dependencies):
         super().__init__(resource_name)
         self._dependencies = _dependencies
+        self._bom = None
 
     def serialize(self):
         return self._dependencies
 
     @property
     def dependencies(self):
-        return (
-            (get_resource(resource_name), self._dependencies[resource_name])
-            for resource_name in self._dependencies.keys()
-        )
+        for dependency, quantity in self._dependencies.items():
+            yield get_resource(dependency), quantity
 
-    def get_BOM(self, q=1):
-        BOM = Counter()
+    def get_BOM(self, q=1, force_update=False):
+        if self._bom is not None and not force_update:
+            return self._bom * q
+
+        BOM = BillOfMaterials()
         for dependency, quantity in self.dependencies:
             if type(dependency) == BasicResource:
-                BOM[dependency] += q * quantity
+                BOM[dependency] += quantity
             else:
-                sub_BOM = dependency.get_BOM(quantity)
-                BOM.update(sub_BOM)
-
-        return BOM
+                dependency_BOM = dependency.get_BOM(quantity, force_update)
+                BOM += dependency_BOM
+        self._bom = BOM
+        return BOM * q
 
 
 def dump_all():
@@ -130,18 +156,18 @@ atexit.register(dump_all)
 
 def _build_plan(resource, top_quantity, level, hierarchy):
     "Helper"
-    c = Counter()
-    c[resource] += top_quantity
+    plan = BillOfMaterials()
+    plan[resource] += top_quantity
     hierarchy[resource] = max(level, hierarchy.get(resource, level))
     if type(resource) == BasicResource:
-        return c
+        return plan
     else:
         for dependency, quantity in resource.dependencies:
             sub_count = _build_plan(
                 dependency, quantity * top_quantity, level + 1, hierarchy
             )
-            c.update(sub_count)
-        return c
+            plan += sub_count
+        return plan
 
 
 def build_plan(resource, quantity):
