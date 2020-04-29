@@ -425,6 +425,8 @@ detail_parser.add_argument("resource_name", help="The resource, no spaces please
 
 
 class MainLoop(Cmd):
+    prompt = "glean: "
+
     def resource_completer(self, text, line, start_index, end_index):
 
         resources = get_resource_list()
@@ -441,6 +443,7 @@ class MainLoop(Cmd):
 
     @with_argparser(list_parser)
     def do_list(self, args):
+        "List all resources"
         all_resources = (
             get_resource(resource_name) for resource_name in get_resource_list()
         )
@@ -451,11 +454,13 @@ class MainLoop(Cmd):
 
     @with_argparser(build_guide_parser)
     def do_build_guide(self, args):
+        "Create a step by step build guide to craft a specific resource"
         items = build_plan(get_resource(args.resource_name), args.quantity)
         print("\n".join(f"{item}: {quantity:,}" for item, quantity in items))
 
     @with_argparser(bom_parser)
     def do_bom(self, args):
+        "( [B]ill [O]f [M]aterials ) List all basic materials reaquired to build a resource"
         bom = get_resource(args.resource_name).get_BOM(args.quantity, args.force_update)
         prelim_items = ((k.resource_name, v) for k, v in bom.items())
         items = sorted(prelim_items, key=lambda pair: pair[0])
@@ -463,15 +468,18 @@ class MainLoop(Cmd):
 
     @with_argparser(add_parser)
     def do_add(self, args):
+        "Add a new resource"
         if args.resource_name not in get_resource_list():
             handle_new_resource(args.resource_name)
 
     @with_argparser(modify_parser)
     def do_modify(self, args):
+        "Change resource dependencies"
         handle_change_resource(args.resource_name)
 
     @with_argparser(detail_parser)
     def do_detail(self, args):
+        "Show resource dependencies"
         if args.resource_name not in get_resource_list():
             print(f"No such resource {args.resource_name}")
             return
