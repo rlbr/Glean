@@ -49,6 +49,9 @@ class BasicResource:
     def __str__(self):
         return self.resource_name
 
+    def __repr__(self):
+        return f"{type(self)}: {self}"
+
     def __hash__(self):
         return hash(self.resource_name)
 
@@ -84,7 +87,6 @@ def get_resource(resource_name):
                 return resource_obj
         except FileNotFoundError:
             new_resource = handle_new_resource(resource_name)
-            new_resource.register()
             return new_resource
 
 
