@@ -1,15 +1,17 @@
 from argparse import ArgumentParser
 import collections
+from concurrent.futures import ProcessPoolExecutor
 import atexit
 import curses
+
 import json
 import os
 import re
 import readline
 
 from cmd2 import Cmd, with_argparser
-from npyscreen import GridColTitles, ActionFormV2, FormMuttActive
 import appdirs
+import npyscreen
 
 GLEAN_DIRS = appdirs.AppDirs("glean")
 BASIC = 0
@@ -24,6 +26,8 @@ RESOURCES_DIR = os.path.join(GLEAN_DIRS.user_data_dir, "resources")
 os.makedirs(RESOURCES_DIR, exist_ok=True)
 
 RESOURCES_DEFINED = dict()
+
+EXECUTOR = ProcessPoolExecutor()
 
 
 class BasicResource:
@@ -180,43 +184,211 @@ def build_plan(resource, quantity):
     return sorted(parts, key=lambda part: hierarchy[part[0]], reverse=True)
 
 
-class MyGrid(GridColTitles):
-    X = 1
-    Y = 0
+def handle_new_resource(resource_name):
+    app_instance = EditApp(resource_name, dict(), defined_resources=get_resource_list())
+    future = EXECUTOR.submit(app_instance.return_resource)
+    future.result()
+    new_resource = future.result()
+    if new_resource is not None:
+        new_resource.register()
+        return new_resource
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, col_titles=["Resource", "Quantity"], **kwargs)
-        self.add_handlers({curses.KEY_ENTER, self.change_cell})
-        super().set_up_handlers
 
-    def change_cell(self):
-        if self.edit_cell[MyGrid.X] == 0:
-            pass
+def handle_change_resource(resource_name):
+    old_resource = get_resource(resource_name)
+    if type(old_resource) == CompositeResource:
+        app_instance = EditApp(
+            old_resource.resource_name,
+            old_resource._dependencies,
+            defined_resources=get_resource_list(),
+        )
+    else:
+        app_instance = EditApp(
+            old_resource.resource_name, defined_resources=get_resource_list
+        )
+    future = EXECUTOR.submit(app_instance.return_resource)
+    new_resource = future.result()
+    if new_resource is not None:
+        new_resource.register()
+        return new_resource
+
+
+class EditApp(npyscreen.NPSAppManaged):
+    def __init__(
+        self,
+        resource_name="New-resource",
+        resource_dependencies={},
+        defined_resources=[],
+    ):
+        super().__init__()
+        self.resource_name = resource_name
+        self.defined_resources = defined_resources
+        self.dependencies_as_list = list(map(list, resource_dependencies.items()))
+        self.shared_state = {"resource": None, "quantity": None, "intent": None}
+
+    def onStart(self):
+        self.addForm("MAIN", EditForm, name=self.resource_name)
+        self.addForm("SELECT", ResourceSelectionForm)
+
+    def return_resource(self):
+        self.run()
+        print(self.shared_state)
+        if self.shared_state["intent"] == "save":
+            if len(self.dependencies_as_list) == 0:
+                res = BasicResource(self.resource_name)
+            else:
+                res = CompositeResource(
+                    self.resource_name, dict(self.dependencies_as_list)
+                )
+            return res
         else:
-            pass
-
-    def to_dict(self):
-        rows = ((str(r), int(q)) for r, q in self.values)
-        return dict(rows)
+            return "Failure"
 
 
-class ModifyResourceForm(ActionFormV2):
-    pass
+class DependencyList(npyscreen.MultiLineAction):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_handlers({"^A": self.add, "^D": self.delete})
+
+    @property
+    def info(self):
+        return self.parent.parentApp.shared_state
+
+    @property
+    def values(self):
+        return self.parent.parentApp.dependencies_as_list
+
+    @values.setter
+    def values(self, _list):
+        pass
+
+    def actionHighlighted(self, act_on_this, keypresses):
+        resource, quantity = act_on_this
+        self.info["resource"] = resource
+        self.info["quantity"] = quantity
+        self.info["intent"] = "edit"
+        self.info["cursor"] = self.cursor_line
+        self.parent.parentApp.switchForm("SELECT")
+
+    def display_value(self, value):
+        return "{}: {:,}".format(*value)
+
+    def add(self, _input):
+        self.info["intent"] = "add"
+        self.info["resource"] = None
+        self.info["quantity"] = None
+        self.parent.parentApp.switchForm("SELECT")
+
+    def delete(self, _input):
+        del self.values[self.cursor_line]
+        self.display()
 
 
-class SelectionPopup(FormMuttActive):
+class EditForm(npyscreen.ActionFormV2):
+    def create(self):
+        self.FRAMED = True
+        self.dependencies = self.add(DependencyList)
+
+    @property
+    def info(self):
+        return self.parentApp.shared_state
+
+    def beforeEditing(self):
+        self.refresh()
+
+    def afterEditing(self):
+        if self.info["intent"] in ("save", "cancel"):
+            self.parentApp.setNextForm(None)
+
+    def on_ok(self):
+        self.info["intent"] = "save"
+
+    def on_cancel(self):
+        self.info["intent"] = "cancel"
+
+
+class GleanAutocomplete(npyscreen.Autocomplete):
+    def auto_complete(self, _input):
+        candidates = [
+            resource
+            for resource in self.parent.parentApp.defined_resources
+            if resource.startswith(self.value)
+        ]
+        if len(candidates) == 0:
+            curses.beep()
+
+        elif len(candidates) == 1:
+            single = candidates[0]
+            if self.value != single:
+                self.value = single
+            self.h_exit_down
+
+        else:
+            cp = os.path.commonprefix(candidates)
+            if cp not in candidates:
+                candidates.insert(0, cp)
+            self.value = candidates[self.get_choice(candidates)]
+
+        self.cursor_position = len(self.value)
+
+
+class TitleResourceField(npyscreen.TitleText):
+    _entry_type = GleanAutocomplete
+
+
+class ResourceSelectionForm(npyscreen.ActionFormV2):
     DEFAULT_LINES = 12
     DEFAULT_COLUMNS = 60
     SHOW_ATX = 10
     SHOW_ATY = 2
 
+    @property
+    def info(self):
+        return self.parentApp.shared_state
 
-def handle_new_resource(resource_name):
-    pass
+    @property
+    def deps_list(self):
+        return self.parentApp.dependencies_as_list
 
+    def create(self):
 
-def handle_change_resource(resource_name):
-    pass
+        self.resource = self.add(TitleResourceField, name="Resource")
+        self.quantity = self.add(npyscreen.TitleText, name="Quantity")
+
+    def beforeEditing(self):
+        if self.info["resource"] is None:
+            self.resource.value = ""
+        else:
+            self.resource.value = self.info["resource"]
+
+        if self.info["quantity"] is None:
+            self.quantity.value = str(1)
+        else:
+            self.quantity.value = str(self.info["quantity"])
+
+    def on_ok(self):
+        self.info["resource"] = self.resource.value
+        try:
+            self.info["quantity"] = int(self.quantity.value)
+
+        except ValueError:
+            npyscreen.notify_confirm(
+                "Not a number: {}".format(self.quantity.value), "Error!"
+            )
+            return
+        if self.info["intent"] == "add":
+            self.deps_list.append([self.info["resource"], self.info["quantity"]])
+
+        elif self.info["intent"] == "edit":
+            self.deps_list[self.info["cursor"]] = [
+                self.info["resource"],
+                self.info["quantity"],
+            ]
+
+        self.parentApp.switchFormPrevious()
+
+    def on_cancel(self):
+        self.parentApp.switchFormPrevious()
 
 
 list_parser = ArgumentParser()
@@ -292,7 +464,8 @@ class MainLoop(Cmd):
 
     @with_argparser(add_parser)
     def do_add(self, args):
-        handle_new_resource(args.resource_name)
+        if args.resource_name not in get_resource_list():
+            handle_new_resource(args.resource_name)
 
     @with_argparser(modify_parser)
     def do_modify(self, args):
