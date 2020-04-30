@@ -14,7 +14,7 @@ class GleanApp(npyscreen.NPSAppManaged):
         self.save_place = False
 
         self.changed = True
-        self.addForm("ADD", AddResource)
+        self.addForm("ADD", ModifyResource)
         self.addForm("MODIFY", ModifyResource)
         self.addForm("VIEW", ResourceDetails)
         self.addForm("GET_RESOURCE", ChangeResourceName, name="Enter Resource Name")
@@ -264,7 +264,7 @@ class ResourceDetails(npyscreen.Form):
     pass
 
 
-class ModResourceBase(npyscreen.ActionFormV2):
+class ModifyResource(npyscreen.ActionFormV2):
     def create(self):
 
         self.change_resource_text = self.add(PressToChange)
@@ -295,14 +295,6 @@ class ModResourceBase(npyscreen.ActionFormV2):
 
     def on_cancel(self):
         self.parentApp.switchForm("MAIN")
-
-
-class AddResource(ModResourceBase):
-    pass
-
-
-class ModifyResource(ModResourceBase):
-    npyscreen.FormMutt
 
 
 # @Main form
