@@ -9,6 +9,7 @@ class GleanApp(npyscreen.NPSAppManaged):
         self.active_resource = None
         self.new_resource = None
         self.last_resource_name_prompt = ""
+        self.to_add_pair = None
 
         self.changed = True
         self.addForm("ADD", AddResource)
@@ -16,13 +17,43 @@ class GleanApp(npyscreen.NPSAppManaged):
         self.addForm("VIEW", ResourceDetails)
         self.addForm("GET_RESOURCE", ResourceNameQuery, name="Enter Resource Name")
         self.addForm("MAIN", ResourceList)
+        self.addForm("SELECT", ResourceSelectionForm)
 
     def register_new_resource(self):
         if self.new_resource is not None:
             self.new_resource.register()
 
 
+class GleanAutocomplete(npyscreen.Autocomplete):
+    def auto_complete(self, _input):
+        candidates = [
+            resource
+            for resource in self.parent.parentApp.defined_resources
+            if resource.startswith(self.value)
+        ]
+        if len(candidates) == 0:
+            curses.beep()
+
+        elif len(candidates) == 1:
+            single = candidates[0]
+            if self.value != single:
+                self.value = single
+            self.h_exit_down
+
+        else:
+            cp = os.path.commonprefix(candidates)
+            if cp not in candidates:
+                candidates.insert(0, cp)
+            self.value = candidates[self.get_choice(candidates)]
+
+        self.cursor_position = len(self.value)
+
+
 # @Widgets and buttons
+
+
+class TitleResourceField(npyscreen.TitleText):
+    _entry_type = GleanAutocomplete
 
 
 class GoBackOk(npyscreen.ButtonPress):
@@ -86,6 +117,46 @@ class ResourceListing(npyscreen.BoxTitle):
 
 
 # @Forms
+
+
+class ResourceSelectionForm(npyscreen.ActionFormV2):
+    DEFAULT_LINES = 12
+    DEFAULT_COLUMNS = 60
+    SHOW_ATX = 60
+    SHOW_ATY = 2
+    resource_default_quantity = 1
+
+    def create(self):
+
+        self.resource = self.add(TitleResourceField, name="Resource")
+        self.quantity = self.add(npyscreen.TitleText, name="Quantity")
+
+    def beforeEditing(self):
+        if self.parentApp.to_add_pair is None:
+            self.resource.value = ""
+            self.quantity.value = str(self.resource_default_quantity)
+
+        else:
+            resource, quantity = self.to_add_pair
+            self.resource.value = resource
+            self.quantity.value = str(quantity)
+
+    def on_ok(self):
+
+        resource = self.resource.value
+        try:
+            quantity = int(self.quantity.value)
+
+        except ValueError:
+            npyscreen.notify_confirm(
+                "Not a number: {}".format(self.quantity.value), "Error!"
+            )
+            return
+        self.parentApp.to_add_pair = resource, quantity
+        self.parentApp.switchFormPrevious()
+
+    def on_cancel(self):
+        self.parentApp.switchFormPrevious()
 
 
 class ResourceNameQuery(npyscreen.Popup):
