@@ -159,9 +159,17 @@ class FilterableResourceListing(npyscreen.BoxTitle):
 
     def __getattribute__(self, attr):
         try:
-            return super().__getattribute__(attr)
-        except AttributeError:
-            return super().__getattribute__("entry_widget").__getattribute__(attr)
+            return super(FilterableResourceListing, self).__getattribute__(attr)
+        except AttributeError as e:
+            if attr in ("parent_widget",):
+                raise e
+            return (
+                super(FilterableResourceListing, self)
+                .__getattribute__("entry_widget")
+                .__getattribute__(attr)
+            )
+        except Exception as e:
+            raise e
 
 
 class _DependencyListing(_AddDeleteModifyList):
