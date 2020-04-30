@@ -19,8 +19,8 @@ class GleanApp(npyscreen.NPSAppManaged):
         self.addForm("MAIN", MainResourceList)
         self.addForm("SELECT", AutocompleResourceQuantity)
 
-    def handle_add(self):
-        self.push("")
+    def handle_add(self, resource_name=""):
+        self.push(resource_name)
         self.new_resource_object = CompositeResource(self.top(), dict())
         self.save_place = False
         self.switchForm("MODIFY")
