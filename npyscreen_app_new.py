@@ -14,7 +14,6 @@ class GleanApp(npyscreen.NPSAppManaged):
         self.save_place = False
 
         self.changed = True
-        self.addForm("ADD", ModifyResource)
         self.addForm("MODIFY", ModifyResource)
         self.addForm("VIEW", ResourceDetails)
         self.addForm("GET_RESOURCE", ChangeResourceName, name="Enter Resource Name")
