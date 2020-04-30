@@ -19,6 +19,32 @@ class GleanApp(npyscreen.NPSAppManaged):
         self.addForm("MAIN", MainResourceList)
         self.addForm("SELECT", AutocompleResourceQuantity)
 
+    def handle_add(self):
+        self.push("")
+        self.new_resource_object = CompositeResource(self.top(), dict())
+        self.save_place = False
+        self.switchForm("MODIFY")
+        self.changed = True
+
+    def handle_modify(self, resource_name):
+        self.push(resource_name)
+        old = get_resource(self.top())
+        self.new_resource_object = CompositeResource(
+            old.resource_name, old._dependencies
+        )
+        self.save_place = False
+        self.switchForm("MODIFY")
+        self.changed = True
+
+    def push(self, resource_name):
+        self.active_resource.append(resource_name)
+
+    def pop(self):
+        return self.active_resource.pop()
+
+    def top(self):
+        return self.active_resource[-1]
+
 
 # @Utils
 
@@ -125,15 +151,10 @@ class _FilterableResourceListing(_AddDeleteModifyList):
             self.parent.update_listing()
 
     def add(self, value):
-        self.pa.new_resource_object = CompositeResource("", dict())
-        self.pa.save_place = False
-        self.pa.form_select = "ADD"
-        self.pa.switchForm("ADD")
-        self.pa.changed = True
+        self.pa.handle_add()
 
     def modify(self, value):
-        self.pa.active_resource = self.values[self.cursor_line]
-        self.pa.switchForm("MODIFY")
+        self.pa.handle_modify(self.values[self.cursor_line])
 
     def quit(self, value):
         self.pa.switchForm(None)
