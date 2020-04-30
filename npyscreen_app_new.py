@@ -11,6 +11,7 @@ class GleanApp(npyscreen.NPSAppManaged):
         self.new_resource_object = None
         self.to_add_pair = None
         self.form_select = None
+        self.save_place = False
 
         self.changed = True
         self.addForm("ADD", AddResource)
@@ -133,9 +134,10 @@ class _FilterableResourceListing(_AddDeleteModifyList):
 
     def add(self, value):
         self.pa.new_resource_object = CompositeResource("", dict())
-        self.pa.last_resource_name_prompt = None
+        self.pa.save_place = False
         self.pa.form_select = "ADD"
         self.pa.switchForm("ADD")
+        self.pa.changed = True
 
     def modify(self, value):
         self.pa.active_resource = self.values[self.cursor_line]
@@ -269,6 +271,13 @@ class ModResourceBase(npyscreen.ActionFormV2):
         self.dependency_listing = self.add(DependencyListing)
 
     def beforeEditing(self):
+        if not self.parentApp.save_place:
+            self.preserve_selected_widget = False
+            self.parentApp.save_place = True
+        else:
+            self.preserve_selected_widget = True
+
+        self.dependency_listing.update_listing()
         self.change_resource_text.value = (
             self.parentApp.new_resource_object.resource_name
         )
