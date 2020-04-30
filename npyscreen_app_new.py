@@ -126,7 +126,7 @@ class _FilterableResourceListing(_AddDeleteModifyList):
 
     def delete(self, value):
         value = self.values[self.cursor_line]
-        if npyscreen.notify_ok_cancel("No way to restore!", "Alert"):
+        if npyscreen.notify_ok_cancel("All deletes are final!", "Alert"):
             delete_resource(value)
             self.pa.changed = True
             self.parent.update_listing()
