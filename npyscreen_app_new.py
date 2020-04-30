@@ -7,7 +7,7 @@ import curses
 
 class GleanApp(npyscreen.NPSAppManaged):
     def onStart(self):
-        self.active_resource = None
+        self.active_resource = []
         self.new_resource_object = None
         self.to_add_pair = None
         self.form_select = None
@@ -272,6 +272,7 @@ class ChangeResourceName(npyscreen.Popup):
 
     def on_ok(self):
         self.parentApp.new_resource_object.resource_name = self.resource_input.value
+        self.parentApp.push(self.resource_input.value)
 
 
 class ResourceDetails(npyscreen.Form):
@@ -299,6 +300,7 @@ class ModifyResource(npyscreen.ActionFormV2):
 
     def on_change_name(self):
         self.name_changed = True
+        self.parentApp.pop()
 
     def on_ok(self):
         new_object = self.parentApp.new_resource_object
