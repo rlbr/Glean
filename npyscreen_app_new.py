@@ -222,13 +222,6 @@ class _DependencyListing(_AddDeleteModifyList):
         del self.pa.new_resource_object._dependencies[dependency_name]
         self.update_listing()
 
-    def on_ok(self):
-        self.pa.new_resource_object._dependencies = dict(self.values)
-        self.pa.switchFormPrevious()
-
-    def on_cancel(self):
-        self.pa.switchFormPrevious()
-
 
 class DependencyListing(FilterableResourceListing):
     _contained_widget = _DependencyListing
@@ -322,8 +315,15 @@ class ModifyResource(npyscreen.ActionFormV2):
 
     def on_ok(self):
         new_object = self.parentApp.new_resource_object
-        if new_object.resource_name != self.parentApp.active_resource:
-            delete_resource(self.parentApp.active_resource)
+        if new_object.resource_name == "":
+            npyscreen.notify_confirm("Please input a name", "Alert")
+            return
+        active_resource = self.parentApp.pop()
+        if new_object.resource_name != active_resource:
+            delete_resource(active_resource)
+        if len(new_object._dependencies) == 0:
+            default_composite = new_object
+            new_object = BasicResource(name=default_composite.resource_name)
         new_object.register()
         self.parentApp.switchForm("MAIN")
 
