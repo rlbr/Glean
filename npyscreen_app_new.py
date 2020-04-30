@@ -24,6 +24,20 @@ class GleanApp(npyscreen.NPSAppManaged):
             self.new_resource.register()
 
 
+# @Utils
+
+
+class ActionControllerSearch(npyscreen.ActionControllerSimple):
+    def create(self):
+        self.add_action("^/.*", self.set_search, True)
+
+    def set_search(self, command_line, widget_proxy, live):
+        self.parent.resource_listing.set_filter(command_line[1:])
+        self.parent.update_listing()
+        self.parent.wMain.values = self.parent.resource_listing.get()
+        self.parent.wMain.display()
+
+
 class GleanAutocomplete(npyscreen.Autocomplete):
     def auto_complete(self, _input):
         candidates = [
@@ -188,17 +202,6 @@ class AddResource(ModResourceBase):
 
 class ModifyResource(ModResourceBase):
     npyscreen.FormMutt
-
-
-class ActionControllerSearch(npyscreen.ActionControllerSimple):
-    def create(self):
-        self.add_action("^/.*", self.set_search, True)
-
-    def set_search(self, command_line, widget_proxy, live):
-        self.parent.resource_listing.set_filter(command_line[1:])
-        self.parent.update_listing()
-        self.parent.wMain.values = self.parent.resource_listing.get()
-        self.parent.wMain.display()
 
 
 # @Main form
