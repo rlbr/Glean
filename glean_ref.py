@@ -77,10 +77,11 @@ def delete_resource(resource_name):
     try:
         del RESOURCES_DEFINED[resource_name]
     except KeyError:
-        try:
-            os.remove(filepath(resource_name))
-        except FileNotFoundError:
-            pass
+        pass
+    try:
+        os.remove(filepath(resource_name))
+    except FileNotFoundError:
+        pass
 
 
 def get_resource_list():
