@@ -69,13 +69,13 @@ class ExitOk(npyscreen.ButtonPress):
 
 
 class _AddDeleteModifyList(npyscreen.MultiLineAction):
-    KEYBINDINGS = {"^A": "add", "^D": "delete", "^E": "modify", "^Q": "quit"}
+    KEYBINDINGS = {"add": "^A", "delete": "^D", "modify": "^E", "quit": "^Q"}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         modifiers = {}
-        for k, v in self.KEYBINDINGS.items():
-            modifiers[k] = getattr(self, v)
+        for f, k in self.KEYBINDINGS.items():
+            modifiers[k] = getattr(self, f)
 
         self.add_handlers(modifiers)
 
@@ -111,7 +111,7 @@ class ResourceListing(npyscreen.BoxTitle):
     def __init__(self, *args, **kwargs):
         help_text = (
             f"{key} -> {function}"
-            for key, function in _AddDeleteModifyList.KEYBINDINGS.items()
+            for function, key in _AddDeleteModifyList.KEYBINDINGS.items()
         )
         super().__init__(*args, footer=" ".join(help_text), **kwargs)
 
