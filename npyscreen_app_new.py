@@ -157,6 +157,12 @@ class FilterableResourceListing(npyscreen.BoxTitle):
         )
         super().__init__(*args, footer=" ".join(help_text), **kwargs)
 
+    def __getattribute__(self, attr):
+        try:
+            return super().__getattribute__(attr)
+        except AttributeError:
+            return super().__getattribute__("entry_widget").__getattribute__(attr)
+
 
 class _DependencyListing(_AddDeleteModifyList):
     KEYBINDINGS = _AddDeleteModifyList.KEYBINDINGS.copy()
