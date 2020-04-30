@@ -39,7 +39,7 @@ class GleanAutocomplete(npyscreen.Autocomplete):
     def auto_complete(self, _input):
         candidates = [
             resource
-            for resource in self.parent.parentApp.defined_resources
+            for resource in get_resource_list()
             if resource.startswith(self.value)
         ]
         if len(candidates) == 0:
