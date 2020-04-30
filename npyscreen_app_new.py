@@ -10,7 +10,6 @@ class GleanApp(npyscreen.NPSAppManaged):
         self.active_resource = []
         self.new_resource_object = None
         self.to_add_pair = None
-        self.form_select = None
         self.save_place = False
 
         self.changed = True
@@ -65,12 +64,6 @@ class GleanAutocomplete(npyscreen.Autocomplete):
 
 class AutocompleteResourceText(npyscreen.TitleText):
     _entry_type = GleanAutocomplete
-
-
-class FormSelectOk(npyscreen.ButtonPress):
-    def whenPressed(self):
-        self.parent.on_ok()
-        self.parent.parentApp.switchForm(self.parent.parentApp.form_select)
 
 
 class _PressToChange(npyscreen.FixedText):
@@ -260,7 +253,7 @@ class AutocompleResourceQuantity(npyscreen.ActionFormV2):
 
 class ChangeResourceName(npyscreen.Popup):
     FRAMED = True
-    OKBUTTON_TYPE = FormSelectOk
+    OKBUTTON_TYPE = GoBackOk
 
     def create(self):
         super().create()
