@@ -188,6 +188,7 @@ class FilterableResourceListing(npyscreen.BoxTitle):
 class _DependencyListing(_AddDeleteModifyList):
     KEYBINDINGS = _AddDeleteModifyList.KEYBINDINGS.copy()
     del KEYBINDINGS["quit"]
+    del KEYBINDINGS["modify"]
 
     def display_value(self, value):
         return "{}: {:,}".format(*value)
@@ -205,16 +206,20 @@ class _DependencyListing(_AddDeleteModifyList):
             key=lambda pair: pair[0],
         )
 
-    def add(self):
+    def add(self, _input):
         self.pa.to_add_pair = None
         self.pa.switchForm("SELECT")
 
+    def actionHighlighted(self, *args):
+        self.modify()
+
     def modify(self):
-        self.pa.to_add_pair = tuple(self.values[self.cursor_line])
+        self.pa.to_add_pair = self.values[self.cursor_line]
         self.pa.switchForm("SELECT")
 
-    def delete(self):
-        del self.values[self.cursor_line]
+    def delete(self, _input):
+        dependency_name = self.values[self.cursor_line][0]
+        del self.pa.new_resource_object._dependencies[dependency_name]
         self.update_listing()
 
     def on_ok(self):
