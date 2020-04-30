@@ -1,5 +1,6 @@
 from glean_ref import *
 import npyscreen
+import curses
 
 # @App definition
 
@@ -7,27 +8,23 @@ import npyscreen
 class GleanApp(npyscreen.NPSAppManaged):
     def onStart(self):
         self.active_resource = None
-        self.new_resource = None
-        self.last_resource_name_prompt = ""
+        self.new_resource_object = None
         self.to_add_pair = None
+        self.form_select = None
 
         self.changed = True
         self.addForm("ADD", AddResource)
         self.addForm("MODIFY", ModifyResource)
         self.addForm("VIEW", ResourceDetails)
-        self.addForm("GET_RESOURCE", ResourceNameQuery, name="Enter Resource Name")
-        self.addForm("MAIN", ResourceList)
-        self.addForm("SELECT", ResourceSelectionForm)
-
-    def register_new_resource(self):
-        if self.new_resource is not None:
-            self.new_resource.register()
+        self.addForm("GET_RESOURCE", ChangeResourceName, name="Enter Resource Name")
+        self.addForm("MAIN", MainResourceList)
+        self.addForm("SELECT", AutocompleResourceQuantity)
 
 
 # @Utils
 
 
-class ActionControllerSearch(npyscreen.ActionControllerSimple):
+class Search(npyscreen.ActionControllerSimple):
     def create(self):
         self.add_action("^/.*", self.set_search, True)
 
@@ -66,8 +63,35 @@ class GleanAutocomplete(npyscreen.Autocomplete):
 # @Widgets and buttons
 
 
-class TitleResourceField(npyscreen.TitleText):
+class AutocompleteResourceText(npyscreen.TitleText):
     _entry_type = GleanAutocomplete
+
+
+class FormSelectOk(npyscreen.ButtonPress):
+    def whenPressed(self):
+        self.parent.on_ok()
+        self.parent.parentApp.switchForm(self.parent.parentApp.form_select)
+
+
+class _PressToChange(npyscreen.FixedText):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_handlers(
+            {curses.ascii.NL: self.handlePress, curses.ascii.CR: self.handlePress}
+        )
+
+    def handlePress(self, _input):
+        self.parent.on_change_name()
+        self.parent.parentApp.switchForm("GET_RESOURCE")
+
+
+class PressToChange(npyscreen.BoxTitle):
+    _contained_widget = _PressToChange
+
+    def __init__(self, *args, **kwargs):
+        kwargs["max_height"] = 3
+        kwargs["name"] = "Resource name"
+        super().__init__(*args, **kwargs)
 
 
 class GoBackOk(npyscreen.ButtonPress):
@@ -90,11 +114,12 @@ class _AddDeleteModifyList(npyscreen.MultiLineAction):
         modifiers = {}
         for f, k in self.KEYBINDINGS.items():
             modifiers[k] = getattr(self, f)
-
         self.add_handlers(modifiers)
 
+        self.pa: GleanApp = self.parent.parentApp
 
-class _ResourceListing(_AddDeleteModifyList):
+
+class _FilterableResourceListing(_AddDeleteModifyList):
     def update_listing(self):
         self.values = list(get_resource_list())
         self.display()
@@ -103,37 +128,82 @@ class _ResourceListing(_AddDeleteModifyList):
         value = self.values[self.cursor_line]
         if npyscreen.notify_ok_cancel("No way to restore!", "Alert"):
             delete_resource(value)
-            self.parent.parentApp.changed = True
+            self.pa.changed = True
             self.parent.update_listing()
 
     def add(self, value):
-        self.parent.parentApp.switchForm("GET_RESOURCE")
-        self.parent.parentApp.setNextForm("ADD")
-        self.parent.parentApp.changed = True
+        self.pa.new_resource_object = CompositeResource("", dict())
+        self.pa.last_resource_name_prompt = None
+        self.pa.form_select = "ADD"
+        self.pa.switchForm("ADD")
 
     def modify(self, value):
-        self.parent.parentApp.active_resource = self.values[self.cursor_line]
-        self.parent.parentApp.switchForm("MODIFY")
+        self.pa.active_resource = self.values[self.cursor_line]
+        self.pa.switchForm("MODIFY")
 
     def quit(self, value):
-        self.parent.parentApp.switchForm(None)
+        self.pa.switchForm(None)
 
 
-class ResourceListing(npyscreen.BoxTitle):
-    _contained_widget = _ResourceListing
+class FilterableResourceListing(npyscreen.BoxTitle):
+    _contained_widget = _FilterableResourceListing
 
     def __init__(self, *args, **kwargs):
         help_text = (
             f"{key} -> {function}"
-            for function, key in _AddDeleteModifyList.KEYBINDINGS.items()
+            for function, key in self._contained_widget.KEYBINDINGS.items()
         )
         super().__init__(*args, footer=" ".join(help_text), **kwargs)
+
+
+class _DependencyListing(_AddDeleteModifyList):
+    KEYBINDINGS = _AddDeleteModifyList.KEYBINDINGS.copy()
+    del KEYBINDINGS["quit"]
+
+    def display_value(self, value):
+        return "{}: {:,}".format(*value)
+
+    def beforeEditing(self):
+        if self.pa.to_add_pair is not None:
+            key, value = self.pa.to_add_pair
+            self.pa.new_resource_object._dependencies[key] = value
+            self.pa.to_add_pair = None
+        self.update_listing()
+
+    def update_listing(self):
+        self.values = sorted(
+            map(list, self.pa.new_resource_object._dependencies.items()),
+            key=lambda pair: pair[0],
+        )
+
+    def add(self):
+        self.pa.to_add_pair = None
+        self.pa.switchForm("SELECT")
+
+    def modify(self):
+        self.pa.to_add_pair = tuple(self.values[self.cursor_line])
+        self.pa.switchForm("SELECT")
+
+    def delete(self):
+        del self.values[self.cursor_line]
+        self.update_listing()
+
+    def on_ok(self):
+        self.pa.new_resource_object._dependencies = dict(self.values)
+        self.pa.switchFormPrevious()
+
+    def on_cancel(self):
+        self.pa.switchFormPrevious()
+
+
+class DependencyListing(FilterableResourceListing):
+    _contained_widget = _DependencyListing
 
 
 # @Forms
 
 
-class ResourceSelectionForm(npyscreen.ActionFormV2):
+class AutocompleResourceQuantity(npyscreen.ActionFormV2):
     DEFAULT_LINES = 12
     DEFAULT_COLUMNS = 60
     SHOW_ATX = 60
@@ -142,7 +212,7 @@ class ResourceSelectionForm(npyscreen.ActionFormV2):
 
     def create(self):
 
-        self.resource = self.add(TitleResourceField, name="Resource")
+        self.resource = self.add(AutocompleteResourceText, name="Resource")
         self.quantity = self.add(npyscreen.TitleText, name="Quantity")
 
     def beforeEditing(self):
@@ -173,19 +243,19 @@ class ResourceSelectionForm(npyscreen.ActionFormV2):
         self.parentApp.switchFormPrevious()
 
 
-class ResourceNameQuery(npyscreen.Popup):
+class ChangeResourceName(npyscreen.Popup):
     FRAMED = True
-    OKBUTTON_TYPE = GoBackOk
+    OKBUTTON_TYPE = FormSelectOk
 
     def create(self):
         super().create()
-        self.resource_input = self.add(npyscreen.TitleText, name="Resource")
+        self.resource_input = self.add(AutocompleteResourceText, name="Resource")
 
     def beforeEditing(self):
         self.resource_input.value = ""
 
     def on_ok(self):
-        self.parentApp.last_resource_name_prompt = self.resource_input.value
+        self.parentApp.new_resource_object.resource_name = self.resource_input.value
 
 
 class ResourceDetails(npyscreen.Form):
@@ -193,7 +263,29 @@ class ResourceDetails(npyscreen.Form):
 
 
 class ModResourceBase(npyscreen.ActionFormV2):
-    pass
+    def create(self):
+
+        self.change_resource_text = self.add(PressToChange)
+        self.dependency_listing = self.add(DependencyListing)
+
+    def beforeEditing(self):
+        self.change_resource_text.value = (
+            self.parentApp.new_resource_object.resource_name
+        )
+        self.change_resource_text.display()
+
+    def on_change_name(self):
+        self.name_changed = True
+
+    def on_ok(self):
+        new_object = self.parentApp.new_resource_object
+        if new_object.resource_name != self.parentApp.active_resource:
+            delete_resource(self.parentApp.active_resource)
+        new_object.register()
+        self.parentApp.switchForm("MAIN")
+
+    def on_cancel(self):
+        self.parentApp.switchForm("MAIN")
 
 
 class AddResource(ModResourceBase):
@@ -207,9 +299,9 @@ class ModifyResource(ModResourceBase):
 # @Main form
 
 
-class ResourceList(npyscreen.FormMuttActive):
-    MAIN_WIDGET_CLASS = ResourceListing
-    ACTION_CONTROLLER = ActionControllerSearch
+class MainResourceList(npyscreen.FormMuttActive):
+    MAIN_WIDGET_CLASS = FilterableResourceListing
+    ACTION_CONTROLLER = Search
 
     def create(self):
         super().create()
