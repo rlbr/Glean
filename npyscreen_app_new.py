@@ -193,18 +193,12 @@ class _DependencyListing(_AddDeleteModifyList):
     def display_value(self, value):
         return "{}: {:,}".format(*value)
 
-    def beforeEditing(self):
-        if self.pa.to_add_pair is not None:
-            key, value = self.pa.to_add_pair
-            self.pa.new_resource_object._dependencies[key] = value
-            self.pa.to_add_pair = None
-        self.update_listing()
-
     def update_listing(self):
         self.values = sorted(
             map(list, self.pa.new_resource_object._dependencies.items()),
             key=lambda pair: pair[0],
         )
+        self.display()
 
     def add(self, _input):
         self.pa.to_add_pair = None
@@ -248,7 +242,7 @@ class AutocompleResourceQuantity(npyscreen.ActionFormV2):
             self.quantity.value = str(self.resource_default_quantity)
 
         else:
-            resource, quantity = self.to_add_pair
+            resource, quantity = self.parentApp.to_add_pair
             self.resource.value = resource
             self.quantity.value = str(quantity)
 
@@ -263,7 +257,8 @@ class AutocompleResourceQuantity(npyscreen.ActionFormV2):
                 "Not a number: {}".format(self.quantity.value), "Error!"
             )
             return
-        self.parentApp.to_add_pair = resource, quantity
+        self.parentApp.to_add_pair = None
+        self.parentApp.new_resource_object._dependencies[resource] = quantity
         self.parentApp.switchFormPrevious()
 
     def on_cancel(self):
