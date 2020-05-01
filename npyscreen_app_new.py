@@ -156,7 +156,24 @@ class _FilterableResourceListing(_AddDeleteModifyList):
         self.pa.switchForm(None)
 
 
-class FilterableResourceListing(npyscreen.BoxTitle):
+class PassthroughBoxTitle(npyscreen.BoxTitle):
+    def __getattribute__(self, attr):
+        try:
+            return super(PassthroughBoxTitle, self).__getattribute__(attr)
+        except AttributeError as e:
+            try:
+                if attr in ("parent_widget",):
+                    raise e
+                return (
+                    super(PassthroughBoxTitle, self)
+                    .__getattribute__("entry_widget")
+                    .__getattribute__(attr)
+                )
+            except Exception as e:
+                raise e
+
+
+class FilterableResourceListing(PassthroughBoxTitle):
     _contained_widget = _FilterableResourceListing
 
     def __init__(self, *args, **kwargs):
@@ -165,20 +182,6 @@ class FilterableResourceListing(npyscreen.BoxTitle):
             for function, key in self._contained_widget.KEYBINDINGS.items()
         )
         super().__init__(*args, footer=" ".join(help_text), **kwargs)
-
-    def __getattribute__(self, attr):
-        try:
-            return super(FilterableResourceListing, self).__getattribute__(attr)
-        except AttributeError as e:
-            if attr in ("parent_widget",):
-                raise e
-            return (
-                super(FilterableResourceListing, self)
-                .__getattribute__("entry_widget")
-                .__getattribute__(attr)
-            )
-        except Exception as e:
-            raise e
 
 
 class _DependencyListing(_AddDeleteModifyList):
