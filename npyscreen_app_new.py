@@ -28,11 +28,13 @@ class GleanApp(npyscreen.NPSAppManaged):
         self.active_resource = []
         self.to_add_pair = None
         self.save_place = False
+        self.caller_resource = None
         self.last_resource_object = None
         self.original_name = None
 
         self.changed = True
         self.addForm("MODIFY", ModifyResource)
+        self.addForm("ADD_QUEUE", AddResourceQueue)
         self.addForm("VIEW", ResourceDetails)
         self.addForm("GET_RESOURCE", ChangeResourceName, name="Enter Resource Name")
         self.addForm("MAIN", MainResourceList)
@@ -387,6 +389,42 @@ class ModifyResource(npyscreen.ActionFormV2):
     def on_cancel(self):
         self.parentApp.pop()
         self.parentApp.switchFormPrevious()
+
+
+class AddResourceQueue(ModifyResource):
+    def create(self):
+
+        self.resource_name = self.add(
+            npyscreen.TitleText, editable=False, name="Resource"
+        )
+        self.dependency_listing = self.add(DependencyListing)
+
+    def beforeEditing(self):
+        npyscreen.notify_confirm(str(self.parentApp.active_resource))
+
+        if self.parentApp.last_resource_object is None:
+            self.parentApp.last_resource_object = Resource(self.parentApp.top(), dict())
+
+        super().beforeEditing()
+
+    def on_cancel(self):
+        npyscreen.notify_confirm("You must save this resource", "Alert")
+
+    def on_ok(self):
+
+        self.parentApp.last_resource_object.register()
+        self.parentApp.pop()
+        npyscreen.notify_confirm(str(self.parentApp.last_resource_object._dependencies))
+        for dependency in self.parentApp.last_resource_object._dependencies.keys():
+            if dependency not in get_resource_list():
+                self.parentApp.push(dependency)
+        self.parentApp.last_resource_object = Resource(self.parentApp.top(), dict())
+        self.parentApp.save_place = False
+        self.parentApp.changed = True
+        if self.parentApp.top() == self.parentApp.caller_resource:
+            self.parentApp.switchFormPrevious()
+        else:
+            self.beforeEditing()
 
 
 class ResourceDetails(npyscreen.Form):
