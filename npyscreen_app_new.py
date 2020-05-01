@@ -116,6 +116,21 @@ class PressToChange(npyscreen.BoxTitle):
         super().__init__(*args, **kwargs)
 
 
+class ActionTextbox(npyscreen.TitleText):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.action_function = kwargs.pop("action_function")
+        self.add_handlers(
+            {
+                curses.ascii.NL: self.handle_action_function,
+                curses.ascii.CR: self.handle_action_function,
+            }
+        )
+
+    def handle_action_function(self, _input):
+        self.action_function(self.value)
+
+
 class ButtonPressCallback(npyscreen.ButtonPress):
     def whenPressed(self):
         self.parent.on_ok()
@@ -366,6 +381,17 @@ class ResourceDetails(npyscreen.Form):
     def create(self):
         self.resource_looked_at = None
         self.resource_name = self.add(npyscreen.FixedText)
+
+        self.BOM = self.add(
+            ActionTextbox,
+            action_function=self.handle_bom,
+            name="Input quantity and press enter for BOM",
+        )
+        self.build_plan = self.add(
+            ActionTextbox,
+            action_function=self.handle_build_plan,
+            name="Input quantity and press enter for Build Plan",
+        )
         self.dependency_listing = self.add(DependencyListingFixed)
 
     def beforeEditing(self):
@@ -381,6 +407,16 @@ class ResourceDetails(npyscreen.Form):
         else:
             self.parentApp.switchFormPrevious()
 
+    def handle_bom(self, quantity):
+        try:
+            self.parentApp.last_requested_quanitity = int(quantity)
+            self.parentApp.switchForm("BOM_INFO")
+        except ValueError:
+            npyscreen.notify_confirm(f"{quantity} is not a valid integer")
+            return
+
+    def handle_build_plan(self, quantity):
+        pass
 
 # @Main form
 
