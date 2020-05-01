@@ -268,8 +268,11 @@ class _DependencyListingFixed(npyscreen.MultiLineAction):
 
     def actionHighlighted(self, value, ch):
         resource_name = value[0]
-        self.parent.parentApp.push(resource_name)
-        self.parent.beforeEditing()
+        if resource_name in get_resource_list():
+            self.parent.parentApp.push(resource_name)
+            self.parent.beforeEditing()
+        else:
+            self.parent.handle_maybe_missing_resources()
 
     def display_value(self, value):
         resource_name, quantity = value
@@ -467,7 +470,24 @@ class ResourceDetails(npyscreen.Form):
         else:
             self.parentApp.switchFormPrevious()
 
+    def mark_missing_dependencies(self, resource_name):
+        resource = get_resource(resource_name)
+        if resource is None:
+            self.parentApp.push(resource_name)
+            return
+
+        for dependency in resource._dependencies.keys():
+            self.mark_missing_dependencies(dependency)
+
     def handle_bom(self, quantity):
+    def handle_maybe_missing_resources(self):
+        self.parentApp.caller_resource = self.parentApp.top()
+        self.mark_missing_dependencies(self.parentApp.caller_resource)
+        if self.parentApp.top() != self.parentApp.caller_resource:
+            self.parentApp.last_resource_object = None
+            self.parentApp.switchForm("ADD_QUEUE")
+            return True
+        return False
         try:
             self.parentApp.last_requested_quanitity = int(quantity)
             self.parentApp.switchForm("BOM_INFO")
