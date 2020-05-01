@@ -30,6 +30,7 @@ class GleanApp(npyscreen.NPSAppManaged):
         self.save_place = False
         self.caller_resource = None
         self.last_command_text = None
+        self.last_info_command = None
         self.last_resource_object = None
         self.original_name = None
 
@@ -458,9 +459,14 @@ class ResourceDetails(npyscreen.Form):
         self.dependency_listing = self.add(DependencyListingFixed)
 
     def beforeEditing(self):
+        if self.parentApp.last_command_text is not None:
+            self.parentApp.switchForm("INFO")
+            return
         self.resource_looked_at = get_resource(self.parentApp.top())
         self.resource_name.value = self.resource_looked_at.resource_name
         self.resource_name.display()
+        self.BOM.value = ""
+        self.build_plan.value = ""
         self.dependency_listing.update_listing()
 
     def on_ok(self):
@@ -480,6 +486,29 @@ class ResourceDetails(npyscreen.Form):
             self.mark_missing_dependencies(dependency)
 
     def handle_bom(self, quantity):
+        self.parentApp.last_info_command = self.bom_set_command_text
+        self.handle_info(quantity)
+
+    def bom_set_command_text(self):
+        resource_name = self.parentApp.top()
+        quantity = self.parentApp.last_requested_quanitity
+        npyscreen.notify_confirm(str(resource_name))
+        bom = get_resource(resource_name).get_BOM(quantity, self.parentApp.changed)
+        prelim_items = ((k.resource_name, v) for k, v in bom.items())
+        items = sorted(prelim_items, key=lambda pair: pair[0])
+        self.parentApp.last_command_text = "\n".join(
+            f"{item}: {quantity:,}" for item, quantity in items
+        )
+
+    def build_plan_set_command_text(self):
+        resource_name = self.parentApp.top()
+        quantity = self.parentApp.last_requested_quanitity
+        items = build_plan(get_resource(resource_name), quantity)
+
+        self.parentApp.last_command_text = "\n".join(
+            f"{item}: {quantity:,}" for item, quantity in items
+        )
+
     def handle_maybe_missing_resources(self):
         self.parentApp.caller_resource = self.parentApp.top()
         self.mark_missing_dependencies(self.parentApp.caller_resource)
@@ -488,15 +517,23 @@ class ResourceDetails(npyscreen.Form):
             self.parentApp.switchForm("ADD_QUEUE")
             return True
         return False
+
+    def handle_info(self, quantity):
         try:
             self.parentApp.last_requested_quanitity = int(quantity)
-            self.parentApp.switchForm("BOM_INFO")
         except ValueError:
             npyscreen.notify_confirm(f"{quantity} is not a valid integer")
             return
+        if not self.handle_maybe_missing_resources():
+
+            self.parentApp.last_info_command()
+            self.beforeEditing()
 
     def handle_build_plan(self, quantity):
-        pass
+        self.parentApp.last_info_command = self.build_plan_set_command_text
+        self.handle_info(quantity)
+
+
 class Infobox(npyscreen.Form):
     FRAMED = True
     OKBUTTON_TYPE = ButtonPressCallback
