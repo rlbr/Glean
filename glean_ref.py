@@ -59,8 +59,7 @@ def get_resource(resource_name):
                 RESOURCES_DEFINED[resource_name] = resource_obj
                 return resource_obj
         except FileNotFoundError:
-            new_resource = handle_new_resource(resource_name)
-            return new_resource
+            return None
 
 
 class BillOfMaterials(collections.defaultdict):
