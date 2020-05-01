@@ -2,6 +2,24 @@ from glean_ref import *
 import npyscreen
 import curses
 
+
+def build_reverse_dependency_tree():
+
+    reverse_dependency_tree = collections.defaultdict(lambda: [])
+    for resource in map(get_resource, get_resource_list()):
+        for depedency in resource._dependencies.keys():
+            reverse_dependency_tree[depedency].append(resource)
+    return reverse_dependency_tree
+
+
+def replace_name(original, new):
+    rdep_tree = build_reverse_dependency_tree()
+    npyscreen.notify_confirm(pprint.pformat(rdep_tree[original]))
+    for parent in rdep_tree[original]:
+        quantity = parent._dependencies.pop(original)
+        parent._dependencies[new] = quantity
+
+
 # @App definition
 
 
@@ -353,10 +371,14 @@ class ModifyResource(npyscreen.ActionFormV2):
         self.parentApp.pop()
         if self.parentApp.original_name is not None:
 
-            if (
-                self.parentApp.new_resource_object.resource_name
-                != self.parentApp.original_name
-            ):
+            if (  # noqa
+                self.parentApp.last_resource_object.resource_name  # noqa
+                != self.parentApp.original_name  # noqa
+            ):  # noqa
+                replace_name(
+                    self.parentApp.original_name,
+                    self.parentApp.last_resource_object.resource_name,
+                )
                 delete_resource(self.parentApp.original_name)
 
         self.parentApp.last_resource_object.register()
