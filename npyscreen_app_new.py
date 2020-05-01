@@ -8,9 +8,9 @@ import curses
 class GleanApp(npyscreen.NPSAppManaged):
     def onStart(self):
         self.active_resource = []
-        self.new_resource_object = None
         self.to_add_pair = None
         self.save_place = False
+        self.last_resource_object = None
         self.original_name = None
 
         self.changed = True
@@ -23,7 +23,7 @@ class GleanApp(npyscreen.NPSAppManaged):
     def handle_add(self, resource_name=""):
         self.push(resource_name)
         self.original_name = None
-        self.new_resource_object = Resource(self.top(), dict())
+        self.last_resource_object = Resource(self.top(), dict())
         self.save_place = False
         self.switchForm("MODIFY")
         self.changed = True
@@ -32,7 +32,7 @@ class GleanApp(npyscreen.NPSAppManaged):
         self.push(resource_name)
         self.original_name = self.top()
         old = get_resource(self.top())
-        self.new_resource_object = Resource(old.resource_name, old._dependencies)
+        self.last_resource_object = Resource(old.resource_name, old._dependencies)
         self.save_place = False
         self.switchForm("MODIFY")
         self.changed = True
@@ -211,7 +211,7 @@ class _DependencyListing(_AddDeleteModifyList):
 
     def update_listing(self):
         self.values = sorted(
-            map(list, self.pa.new_resource_object._dependencies.items()),
+            map(list, self.pa.last_resource_object._dependencies.items()),
             key=lambda pair: pair[0],
         )
         self.display()
@@ -229,7 +229,7 @@ class _DependencyListing(_AddDeleteModifyList):
 
     def delete(self, _input):
         dependency_name = self.values[self.cursor_line][0]
-        del self.pa.new_resource_object._dependencies[dependency_name]
+        del self.pa.last_resource_object._dependencies[dependency_name]
         self.update_listing()
 
 
@@ -299,7 +299,7 @@ class AutocompleResourceQuantity(npyscreen.ActionFormV2):
             )
             return
         self.parentApp.to_add_pair = None
-        self.parentApp.new_resource_object._dependencies[resource] = quantity
+        self.parentApp.last_resource_object._dependencies[resource] = quantity
         self.parentApp.switchFormPrevious()
 
     def on_cancel(self):
@@ -318,7 +318,7 @@ class ChangeResourceName(npyscreen.Popup):
         self.resource_input.value = ""
 
     def on_ok(self):
-        self.parentApp.new_resource_object.resource_name = self.resource_input.value
+        self.parentApp.last_resource_object.resource_name = self.resource_input.value
         self.parentApp.push(self.resource_input.value)
         self.parentApp.switchFormPrevious()
 
@@ -348,7 +348,7 @@ class ModifyResource(npyscreen.ActionFormV2):
 
     def on_ok(self):
 
-        if self.parentApp.new_resource_object.resource_name == "":
+        if self.parentApp.last_resource_object.resource_name == "":
             npyscreen.notify_confirm("Please input a name", "Alert")
             return
 
@@ -361,7 +361,7 @@ class ModifyResource(npyscreen.ActionFormV2):
             ):
                 delete_resource(self.parentApp.original_name)
 
-        self.parentApp.new_resource_object.register()
+        self.parentApp.last_resource_object.register()
         self.parentApp.switchFormPrevious()
 
     def on_cancel(self):
@@ -374,7 +374,7 @@ class ResourceDetails(npyscreen.Form):
 
     def create(self):
         self.resource_looked_at = None
-        self.resource_name = self.add(npyscreen.FixedText)
+        self.resource_name = self.add(npyscreen.FixedText, editable=False)
 
         self.BOM = self.add(
             ActionTextbox,
