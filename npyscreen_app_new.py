@@ -23,7 +23,7 @@ class GleanApp(npyscreen.NPSAppManaged):
     def handle_add(self, resource_name=""):
         self.push(resource_name)
         self.original_name = None
-        self.new_resource_object = CompositeResource(self.top(), dict())
+        self.new_resource_object = Resource(self.top(), dict())
         self.save_place = False
         self.switchForm("MODIFY")
         self.changed = True
@@ -32,9 +32,7 @@ class GleanApp(npyscreen.NPSAppManaged):
         self.push(resource_name)
         self.original_name = self.top()
         old = get_resource(self.top())
-        self.new_resource_object = CompositeResource(
-            old.resource_name, old._dependencies
-        )
+        self.new_resource_object = Resource(old.resource_name, old._dependencies)
         self.save_place = False
         self.switchForm("MODIFY")
         self.changed = True
@@ -350,24 +348,20 @@ class ModifyResource(npyscreen.ActionFormV2):
 
     def on_ok(self):
 
-        new_object = self.parentApp.new_resource_object
-        if new_object.resource_name == "":
+        if self.parentApp.new_resource_object.resource_name == "":
             npyscreen.notify_confirm("Please input a name", "Alert")
             return
 
         self.parentApp.pop()
         if self.parentApp.original_name is not None:
-            npyscreen.notify_confirm(
-                f"{new_object.resource_name} {self.parentApp.original_name}"
-            )
-            if new_object.resource_name != self.parentApp.original_name:
+
+            if (
+                self.parentApp.new_resource_object.resource_name
+                != self.parentApp.original_name
+            ):
                 delete_resource(self.parentApp.original_name)
 
-        if len(new_object._dependencies) == 0:
-            default_composite = new_object
-            new_object = BasicResource(name=default_composite.resource_name)
-
-        new_object.register()
+        self.parentApp.new_resource_object.register()
         self.parentApp.switchFormPrevious()
 
     def on_cancel(self):

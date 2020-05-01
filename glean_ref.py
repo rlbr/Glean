@@ -11,7 +11,6 @@ import appdirs
 
 
 GLEAN_DIRS = appdirs.AppDirs("glean_dev")
-BASIC = 0
 os.makedirs(GLEAN_DIRS.user_state_dir, exist_ok=True)
 hist_file = os.path.join(GLEAN_DIRS.user_state_dir, "history")
 if not os.path.exists(hist_file):
@@ -27,50 +26,8 @@ RESOURCES_DEFINED = dict()
 EXECUTOR = ProcessPoolExecutor()
 
 
-class BasicResource:
-    "Definition: A resource that cannot be divided futher, and has no dependencies."
-    __res_type__ = BASIC
-
-    def __init__(self, resource_name):
-        self.resource_name = resource_name
-
-    def save(self):
-        with open(
-            os.path.join(RESOURCES_DIR, f"{self.resource_name}.json"), "w"
-        ) as file:
-            json.dump(self.serialize(), file)
-
-    def serialize(self):
-        return None
-
-    @property
-    def defined(self):
-        return f"{self.resource_name}.json" in os.listdir(RESOURCES_DIR)
-
-    def __str__(self):
-        return self.resource_name
-
-    def __repr__(self):
-        return f"{type(self)}: {self}"
-
-    def __hash__(self):
-        return hash(self.resource_name)
-
-    def register(self):
-        global RESOURCES_DEFINED
-        RESOURCES_DEFINED[self.resource_name] = self
-
-
 def filepath(resource_name):
     return os.path.join(RESOURCES_DIR, f"{resource_name}.json")
-
-
-def deserialize(resource_name, data: dict):
-    "dict -> BasicResource/CompositeResource as appropriate."
-    if data is None:
-        return BasicResource(resource_name)
-    else:
-        return CompositeResource(resource_name, data)
 
 
 def delete_resource(resource_name):
@@ -98,7 +55,7 @@ def get_resource(resource_name):
     except KeyError:
         try:
             with open(os.path.join(RESOURCES_DIR, f"{resource_name}.json")) as file:
-                resource_obj = deserialize(resource_name, json.load(file))
+                resource_obj = Resource(resource_name, json.load(file))
                 RESOURCES_DEFINED[resource_name] = resource_obj
                 return resource_obj
         except FileNotFoundError:
@@ -130,13 +87,34 @@ class BillOfMaterials(collections.defaultdict):
         return BillOfMaterials(merged)
 
 
-class CompositeResource(BasicResource):
-    "Anything that cannot qualify as a BasicResource"
-
+class Resource:
     def __init__(self, resource_name, _dependencies):
-        super().__init__(resource_name)
+        self.resource_name = resource_name
         self._dependencies = _dependencies
         self._bom = None
+
+    def save(self):
+        with open(
+            os.path.join(RESOURCES_DIR, f"{self.resource_name}.json"), "w"
+        ) as file:
+            json.dump(self.serialize(), file)
+
+    @property
+    def defined(self):
+        return f"{self.resource_name}.json" in os.listdir(RESOURCES_DIR)
+
+    def __str__(self):
+        return self.resource_name
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}: {self}"
+
+    def __hash__(self):
+        return hash(self.resource_name)
+
+    def register(self):
+        global RESOURCES_DEFINED
+        RESOURCES_DEFINED[self.resource_name] = self
 
     def serialize(self):
         return self._dependencies
@@ -147,16 +125,16 @@ class CompositeResource(BasicResource):
             yield get_resource(dependency), quantity
 
     def get_BOM(self, q=1, force_update=False):
+        BOM = BillOfMaterials()
+        if len(self._dependencies) == 0:
+            BOM[self] += q
+            return BOM
         if self._bom is not None and not force_update:
             return self._bom * q
 
-        BOM = BillOfMaterials()
         for dependency, quantity in self.dependencies:
-            if type(dependency) == BasicResource:
-                BOM[dependency] += quantity
-            else:
-                dependency_BOM = dependency.get_BOM(quantity, force_update)
-                BOM += dependency_BOM
+            dependency_BOM = dependency.get_BOM(quantity, force_update)
+            BOM += dependency_BOM
         self._bom = BOM
         return BOM * q
 
@@ -177,15 +155,12 @@ def _build_plan(resource, top_quantity, level, hierarchy):
     plan = BillOfMaterials()
     plan[resource] += top_quantity
     hierarchy[resource] = max(level, hierarchy.get(resource, level))
-    if type(resource) == BasicResource:
-        return plan
-    else:
-        for dependency, quantity in resource.dependencies:
-            sub_count = _build_plan(
-                dependency, quantity * top_quantity, level + 1, hierarchy
-            )
-            plan += sub_count
-        return plan
+    for dependency, quantity in resource.dependencies:
+        sub_count = _build_plan(
+            dependency, quantity * top_quantity, level + 1, hierarchy
+        )
+        plan += sub_count
+    return plan
 
 
 def build_plan(resource, quantity):
@@ -196,5 +171,5 @@ def build_plan(resource, quantity):
     return sorted(parts, key=lambda part: hierarchy[part[0]], reverse=True)
 
 
-def handle_new_resource(resource_name):
-    return None
+def BOM(resource, quantity, update):
+    return get_resource(resource).get_BOM(quantity)
