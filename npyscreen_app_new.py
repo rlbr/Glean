@@ -26,15 +26,15 @@ def replace_name(original, new):
 class GleanApp(npyscreen.NPSAppManaged):
     def onStart(self):
         self.active_resource = []
-        self.to_add_pair = None
-        self.save_place = False
         self.caller_resource = None
+        self.changed = True
         self.last_command_text = None
         self.last_info_command = None
         self.last_resource_object = None
         self.original_name = None
+        self.save_place = False
+        self.to_add_pair = None
 
-        self.changed = True
         self.addForm("MODIFY", ModifyResource)
         self.addForm("ADD_QUEUE", AddResourceQueue)
         self.addForm("VIEW", ResourceDetails)
