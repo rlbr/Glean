@@ -152,6 +152,10 @@ class _FilterableResourceListing(_AddDeleteModifyList):
     def modify(self, value):
         self.pa.handle_modify(self.values[self.cursor_line])
 
+    def actionHighlighted(self, value, ch):
+        self.pa.push(value)
+        self.pa.switchForm("VIEW")
+
     def quit(self, value):
         self.pa.switchForm(None)
 
@@ -218,6 +222,31 @@ class _DependencyListing(_AddDeleteModifyList):
 
 class DependencyListing(FilterableResourceListing):
     _contained_widget = _DependencyListing
+
+
+class _DependencyListingFixed(npyscreen.MultiLineAction):
+    def update_listing(self):
+        self.values = list(
+            map(list, self.parent.resource_looked_at._dependencies.items())
+        )
+        self.display()
+
+    def actionHighlighted(self, value, ch):
+        resource_name = value[0]
+        self.parent.parentApp.push(resource_name)
+        self.parent.beforeEditing()
+
+    def display_value(self, value):
+        resource_name, quantity = value
+        return f"{resource_name}: {quantity}"
+
+
+class DependencyListingFixed(PassthroughBoxTitle):
+    _contained_widget = _DependencyListingFixed
+
+    def __init__(self, *args, **kwargs):
+        kwargs["name"] = "Dependencies"
+        super().__init__(*args, **kwargs)
 
 
 # @Forms
@@ -329,6 +358,28 @@ class ModifyResource(npyscreen.ActionFormV2):
     def on_cancel(self):
         self.parentApp.pop()
         self.parentApp.switchFormPrevious()
+
+
+class ResourceDetails(npyscreen.Form):
+    OKBUTTON_TYPE = ButtonPressCallback
+
+    def create(self):
+        self.resource_looked_at = None
+        self.resource_name = self.add(npyscreen.FixedText)
+        self.dependency_listing = self.add(DependencyListingFixed)
+
+    def beforeEditing(self):
+        self.resource_looked_at = get_resource(self.parentApp.top())
+        self.resource_name.value = self.resource_looked_at.resource_name
+        self.resource_name.display()
+        self.dependency_listing.update_listing()
+
+    def on_ok(self):
+        self.parentApp.pop()
+        if len(self.parentApp.active_resource) != 0:
+            self.beforeEditing()
+        else:
+            self.parentApp.switchFormPrevious()
 
 
 # @Main form
