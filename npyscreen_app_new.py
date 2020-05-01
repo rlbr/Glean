@@ -326,7 +326,7 @@ class ChangeResourceName(npyscreen.Popup):
 class ModifyResource(npyscreen.ActionFormV2):
     def create(self):
 
-        self.change_resource_text = self.add(PressToChange)
+        self.resource_name = self.add(PressToChange)
         self.dependency_listing = self.add(DependencyListing)
 
     def beforeEditing(self):
@@ -337,10 +337,8 @@ class ModifyResource(npyscreen.ActionFormV2):
             self.preserve_selected_widget = True
 
         self.dependency_listing.update_listing()
-        self.change_resource_text.value = (
-            self.parentApp.new_resource_object.resource_name
-        )
-        self.change_resource_text.display()
+        self.resource_name.value = self.parentApp.last_resource_object.resource_name
+        self.resource_name.display()
 
     def on_change_name(self):
         self.name_changed = True
