@@ -116,16 +116,9 @@ class PressToChange(npyscreen.BoxTitle):
         super().__init__(*args, **kwargs)
 
 
-class GoBackOk(npyscreen.ButtonPress):
+class ButtonPressCallback(npyscreen.ButtonPress):
     def whenPressed(self):
         self.parent.on_ok()
-        self.parent.parentApp.switchFormPrevious()
-
-
-class ExitOk(npyscreen.ButtonPress):
-    def whenPressed(self):
-        self.parent.on_ok()
-        self.parent.parentApp.switchForm(None)
 
 
 class _AddDeleteModifyList(npyscreen.MultiLineAction):
@@ -270,7 +263,7 @@ class AutocompleResourceQuantity(npyscreen.ActionFormV2):
 
 class ChangeResourceName(npyscreen.Popup):
     FRAMED = True
-    OKBUTTON_TYPE = GoBackOk
+    OKBUTTON_TYPE = ButtonPressCallback
 
     def create(self):
         super().create()
@@ -282,10 +275,7 @@ class ChangeResourceName(npyscreen.Popup):
     def on_ok(self):
         self.parentApp.new_resource_object.resource_name = self.resource_input.value
         self.parentApp.push(self.resource_input.value)
-
-
-class ResourceDetails(npyscreen.Form):
-    pass
+        self.parentApp.switchFormPrevious()
 
 
 class ModifyResource(npyscreen.ActionFormV2):
