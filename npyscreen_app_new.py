@@ -29,6 +29,7 @@ class GleanApp(npyscreen.NPSAppManaged):
         self.to_add_pair = None
         self.save_place = False
         self.caller_resource = None
+        self.last_command_text = None
         self.last_resource_object = None
         self.original_name = None
 
@@ -39,6 +40,7 @@ class GleanApp(npyscreen.NPSAppManaged):
         self.addForm("GET_RESOURCE", ChangeResourceName, name="Enter Resource Name")
         self.addForm("MAIN", MainResourceList)
         self.addForm("SELECT", AutocompleResourceQuantity)
+        self.addForm("INFO", Infobox)
 
     def handle_add(self, resource_name=""):
         self.push(resource_name)
@@ -282,6 +284,12 @@ class DependencyListingFixed(PassthroughBoxTitle):
         super().__init__(*args, **kwargs)
 
 
+class CommandText(npyscreen.MultiLineEditableBoxed):
+    def __init__(self, *args, **kwargs):
+        kwargs["editable"] = False
+        super().__init__(*args, **kwargs)
+
+
 # @Forms
 
 
@@ -469,6 +477,26 @@ class ResourceDetails(npyscreen.Form):
 
     def handle_build_plan(self, quantity):
         pass
+class Infobox(npyscreen.Form):
+    FRAMED = True
+    OKBUTTON_TYPE = ButtonPressCallback
+
+    def __init__(self, *args, **kwargs):
+        kwargs["name"] = "Info"
+
+        super().__init__(*args, **kwargs)
+
+    def create(self):
+        self.command_box = self.add(npyscreen.MultiLineEdit, editable=False)
+
+    def beforeEditing(self):
+        self.command_box.value = self.parentApp.last_command_text
+        self.command_box.update()
+
+    def on_ok(self):
+        self.parentApp.last_command_text = None
+        self.parentApp.switchFormPrevious()
+
 
 # @Main form
 
