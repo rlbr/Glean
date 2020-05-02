@@ -363,10 +363,10 @@ class _FilterableResourceListing(_AddDeleteModifyList):
     def quit(self, value):
         self.pa.switchForm(None)
 
-    def search(self, *args):
+    def search(self, _input):
         self.parent.wCommand.edit()
 
-    def reset_search(self, *args):
+    def reset_search(self, _input):
         self.parent.resource_listing.set_filter("")
         self.parent.update_listing()
         self.parent.wMain.values = self.parent.resource_listing.get()
@@ -422,7 +422,7 @@ class _DependencyListing(_AddDeleteModifyList):
         self.pa.to_add_pair = None
         self.pa.switchForm("SELECT")
 
-    def actionHighlighted(self, *args):
+    def actionHighlighted(self, _input):
         self.modify()
 
     def modify(self):
@@ -654,7 +654,7 @@ class ResourceDetails(npyscreen.Form):
         self.build_plan.value = ""
         self.dependency_listing.update_listing()
 
-    def on_ok(self, *args):
+    def on_ok(self, _input):
         self.parentApp.pop()
         if len(self.parentApp.active_resource) != 0:
             self.beforeEditing()
