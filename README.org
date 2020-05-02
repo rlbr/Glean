@@ -1,0 +1,9 @@
+#+TITLE: Glean App
+* To Install
+Make aure you have python 3.6+!
+#+BEGIN_SRC sh
+git clone https://github.com/rlbr/glean
+cd glean
+pip install -r requirements.txt
+python glean.py
+#+END_SRC
