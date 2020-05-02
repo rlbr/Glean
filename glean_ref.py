@@ -573,7 +573,6 @@ class AddResourceQueue(ModifyResource):
         self.dependency_listing = self.add(DependencyListing)
 
     def beforeEditing(self):
-        npyscreen.notify_confirm(str(self.parentApp.active_resource))
 
         if self.parentApp.last_resource_object is None:
             self.parentApp.last_resource_object = Resource(self.parentApp.top(), dict())
@@ -587,7 +586,6 @@ class AddResourceQueue(ModifyResource):
 
         self.parentApp.last_resource_object.register()
         self.parentApp.pop()
-        npyscreen.notify_confirm(str(self.parentApp.last_resource_object._dependencies))
         for dependency in self.parentApp.last_resource_object._dependencies.keys():
             if dependency not in get_resource_list():
                 self.parentApp.push(dependency)
@@ -653,7 +651,6 @@ class ResourceDetails(npyscreen.Form):
     def bom_set_command_text(self):
         resource_name = self.parentApp.top()
         quantity = self.parentApp.last_requested_quanitity
-        npyscreen.notify_confirm(str(resource_name))
         bom = get_resource(resource_name).get_BOM(quantity, self.parentApp.changed)
         prelim_items = ((k.resource_name, v) for k, v in bom.items())
         items = sorted(prelim_items, key=lambda pair: pair[0])
