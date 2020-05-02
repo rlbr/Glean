@@ -1,4 +1,7 @@
 #+TITLE: Glean App
+* What Is It?
+This is a (relatively) simple npyscreen app that aims to inform you how many raw materials you will need to craft a certain resource.
+It also gives an order of operations to craft each sub-component in which quantity.
 * To Install
 Make aure you have python 3.6+!
 #+BEGIN_SRC sh
@@ -7,3 +10,5 @@ cd glean
 pip install -r requirements.txt
 python glean.py
 #+END_SRC
+* TODO
+- An inventory system that will give you how many resources you have left to collect
