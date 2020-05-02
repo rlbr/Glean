@@ -1,3 +1,2 @@
 appdirs
-cmd2
 npyscreen
