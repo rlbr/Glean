@@ -10,5 +10,5 @@ cd glean
 pip install -r requirements.txt
 python glean.py
 #+END_SRC
-* TODO
+* TODO Things left to add
 - An inventory system that will give you how many resources you have left to collect
