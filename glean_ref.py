@@ -319,13 +319,20 @@ class ButtonPressCallback(npyscreen.ButtonPress):
 
 
 class _AddDeleteModifyList(npyscreen.MultiLineAction):
-    KEYBINDINGS = {"add": "^A", "delete": "^D", "modify": "^E", "quit": "^Q"}
+    KEYBINDINGS = {
+        "add": "a",
+        "delete": "d",
+        "modify": "e",
+        "quit": "q",
+        "search": "s",
+        "reset search": "^R",
+    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         modifiers = {}
         for f, k in self.KEYBINDINGS.items():
-            modifiers[k] = getattr(self, f)
+            modifiers[k] = getattr(self, f.replace(" ", "_"))
         self.add_handlers(modifiers)
 
         self.pa: GleanApp = self.parent.parentApp
@@ -356,6 +363,17 @@ class _FilterableResourceListing(_AddDeleteModifyList):
     def quit(self, value):
         self.pa.switchForm(None)
 
+    def search(self, *args):
+        self.parent.wCommand.edit()
+
+    def reset_search(self, *args):
+        self.parent.resource_listing.set_filter("")
+        self.parent.update_listing()
+        self.parent.wMain.values = self.parent.resource_listing.get()
+        self.parent.wMain.display()
+        self.parent.wCommand.value = ""
+        self.parent.wCommand.display()
+
 
 class PassthroughBoxTitle(npyscreen.BoxTitle):
     def __getattribute__(self, attr):
@@ -379,16 +397,16 @@ class FilterableResourceListing(PassthroughBoxTitle):
 
     def __init__(self, *args, **kwargs):
         help_text = (
-            f"{key} -> {function}"
+            f"{key} -> {function.title()}"
             for function, key in self._contained_widget.KEYBINDINGS.items()
         )
         super().__init__(*args, footer=" ".join(help_text), **kwargs)
 
 
 class _DependencyListing(_AddDeleteModifyList):
-    KEYBINDINGS = _AddDeleteModifyList.KEYBINDINGS.copy()
-    del KEYBINDINGS["quit"]
-    del KEYBINDINGS["modify"]
+    KEYBINDINGS = {}
+    for key in ("add", "modify", "delete"):
+        KEYBINDINGS[key] = _AddDeleteModifyList.KEYBINDINGS[key]
 
     def display_value(self, value):
         return "{}: {:,}".format(*value)
@@ -599,7 +617,15 @@ class AddResourceQueue(ModifyResource):
 
 
 class ResourceDetails(npyscreen.Form):
+
     OKBUTTON_TYPE = ButtonPressCallback
+
+    def __init__(self, *args, **kwargs):
+        kwargs["name"] = "Details"
+        kwargs["help"] = "^Q -> Back"
+
+        super().__init__(*args, **kwargs)
+        self.handlers.update({"^Q": self.on_ok})
 
     def create(self):
         self.resource_looked_at = None
@@ -608,7 +634,7 @@ class ResourceDetails(npyscreen.Form):
         self.BOM = self.add(
             ActionTextbox,
             action_function=self.handle_bom,
-            name="Input quantity and press enter for BOM",
+            name="Input quantity and press enter for Bill Of Materials",
         )
         self.build_plan = self.add(
             ActionTextbox,
@@ -628,7 +654,7 @@ class ResourceDetails(npyscreen.Form):
         self.build_plan.value = ""
         self.dependency_listing.update_listing()
 
-    def on_ok(self):
+    def on_ok(self, *args):
         self.parentApp.pop()
         if len(self.parentApp.active_resource) != 0:
             self.beforeEditing()
