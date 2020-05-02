@@ -9,7 +9,7 @@ import re
 import appdirs
 import npyscreen
 
-GLEAN_DIRS = appdirs.AppDirs("glean_dev")
+GLEAN_DIRS = appdirs.AppDirs("glean")
 os.makedirs(GLEAN_DIRS.user_state_dir, exist_ok=True)
 RESOURCES_DIR = os.path.join(GLEAN_DIRS.user_data_dir, "resources")
 os.makedirs(RESOURCES_DIR, exist_ok=True)
