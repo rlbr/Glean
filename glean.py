@@ -424,7 +424,7 @@ class _DependencyListing(_AddDeleteModifyList):
         self.pa.to_add_pair = None
         self.pa.switchForm("SELECT")
 
-    def actionHighlighted(self, _input):
+    def actionHighlighted(self, value, ch):
         self.modify()
 
     def modify(self):
@@ -656,7 +656,7 @@ class ResourceDetails(npyscreen.Form):
         self.build_plan.value = ""
         self.dependency_listing.update_listing()
 
-    def on_ok(self):
+    def on_ok(self, _input=None):
         self.parentApp.pop()
         if len(self.parentApp.active_resource) != 0:
             self.beforeEditing()
