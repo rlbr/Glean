@@ -79,6 +79,10 @@ class BillOfMaterials(collections.defaultdict):
         return BillOfMaterials(merged)
 
 
+class CircularDependenciesError(Exception):
+    pass
+
+
 class Resource:
     def __init__(self, resource_name, _dependencies):
         self.resource_name = resource_name
@@ -104,6 +108,9 @@ class Resource:
     def __hash__(self):
         return hash(self.resource_name)
 
+    def __eq__(self, other):
+        return self.resource_name == other.resource_name
+
     def register(self):
         global RESOURCES_DEFINED
         RESOURCES_DEFINED[self.resource_name] = self
@@ -115,6 +122,10 @@ class Resource:
     def dependencies(self):
         for dependency, quantity in self._dependencies.items():
             yield get_resource(dependency), quantity
+
+    def add_dependency(self, dependency, quantity):
+        self.check_loop(dependency)
+        self._dependencies[dependency] = quantity
 
     def get_BOM(self, q=1, force_update=False):
         BOM = BillOfMaterials()
@@ -129,6 +140,21 @@ class Resource:
             BOM += dependency_BOM
         self._bom = BOM
         return BOM * q
+
+    def check_loop(self, maybe_add):
+        start_node = get_resource(maybe_add)
+        if start_node is None:
+            return
+        if start_node == self:
+            raise CircularDependenciesError
+        if self in start_node._children_dependencies():
+            raise CircularDependenciesError
+
+    def _children_dependencies(self):
+        for child, quantity in self.dependencies:
+            if child is not None:
+                yield from child._children_dependencies()
+                yield child
 
 
 def dump_all():
@@ -529,7 +555,11 @@ class AutocompleResourceQuantity(npyscreen.ActionFormV2):
             )
             return
         self.parentApp.to_add_pair = None
-        self.parentApp.last_resource_object._dependencies[resource] = quantity
+        try:
+            self.parentApp.last_resource_object.add_dependency(resource, quantity)
+            self.parentApp.last_resource_object.register()
+        except CircularDependenciesError:
+            npyscreen.notify_confirm("Circular Dependency detected!")
         self.parentApp.switchFormPrevious()
 
     def on_cancel(self):
