@@ -364,7 +364,6 @@ class _AddDeleteModifyList(npyscreen.MultiLineAction):
         "quit": "q",
         "search": "s",
         "reset search": "^R",
-        "fill in holes": "^H",
     }
 
     def __init__(self, *args, **kwargs):
@@ -412,12 +411,6 @@ class _FilterableResourceListing(_AddDeleteModifyList):
         self.parent.wMain.display()
         self.parent.wCommand.value = ""
         self.parent.wCommand.display()
-
-    def fill_in_holes(self, _input=None):
-        for resource in get_resource_list():
-            self.pa.mark_missing_dependencies(resource)
-        self.pa.last_resource_object = None
-        self.pa.switchForm("ADD_QUEUE")
 
 
 class PassthroughBoxTitle(npyscreen.BoxTitle):
@@ -470,7 +463,7 @@ class _DependencyListing(_AddDeleteModifyList):
     def actionHighlighted(self, value, ch):
         self.modify()
 
-    def modify(self):
+    def modify(self, _input=None):
         self.pa.to_add_pair = self.values[self.cursor_line]
         self.pa.switchForm("SELECT")
 
@@ -671,6 +664,7 @@ class AddResourceQueue(ModifyResource):
                 self.parentApp.last_resource_object = Resource(
                     self.parentApp.top(), dict()
                 )
+                self.beforeEditing()
             else:
                 self.parentApp.switchFormPrevious()
 
@@ -805,10 +799,21 @@ class MainResourceList(npyscreen.FormMuttActive):
 
     def update_listing(self):
         if self.parentApp.changed:
+
             self.resource_listing.set_values(get_resource_list())
             self.wMain.values = self.resource_listing.get()
             self.wMain.display()
             self.parentApp.changed = False
+
+    def fill_in_holes(self, _input=None):
+        for resource in get_resource_list():
+            self.parentApp.mark_missing_dependencies(resource)
+        if len(self.parentApp.active_resource) > 0:
+            self.parentApp.last_resource_object = None
+            self.parentApp.switchForm("ADD_QUEUE")
+
+    def while_editing(self, *args, **kwargs):
+        self.fill_in_holes()
 
     def beforeEditing(self):
         self.update_listing()
