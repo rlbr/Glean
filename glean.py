@@ -386,6 +386,12 @@ class _FilterableResourceListing(_AddDeleteModifyList):
         self.parent.wCommand.value = ""
         self.parent.wCommand.display()
 
+    def fill_in_holes(self, _input=None):
+        for resource in get_resource_list():
+            self.pa.mark_missing_dependencies(resource)
+
+        self.pa.switchForm("ADD_QUEUE")
+
 
 class PassthroughBoxTitle(npyscreen.BoxTitle):
     def __getattribute__(self, attr):
@@ -619,13 +625,23 @@ class AddResourceQueue(ModifyResource):
         for dependency in self.parentApp.last_resource_object._dependencies.keys():
             if dependency not in get_resource_list():
                 self.parentApp.push(dependency)
-        self.parentApp.last_resource_object = Resource(self.parentApp.top(), dict())
         self.parentApp.save_place = False
         self.parentApp.changed = True
-        if self.parentApp.top() == self.parentApp.caller_resource:
-            self.parentApp.switchFormPrevious()
+        if self.caller_resource is not None:
+            self.parentApp.last_resource_object = Resource(self.parentApp.top(), dict())
+            # from details
+            if self.parentApp.top() == self.parentApp.caller_resource:
+                self.parentApp.switchFormPrevious()
+            else:
+                self.beforeEditing()
         else:
-            self.beforeEditing()
+            # from main app
+            if len(self.parentApp.active_resource) != 0:
+                self.parentApp.last_resource_object = Resource(
+                    self.parentApp.top(), dict()
+                )
+            else:
+                self.parentApp.switchFormPrevious()
 
 
 class ResourceDetails(npyscreen.Form):
