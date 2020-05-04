@@ -656,7 +656,7 @@ class ResourceDetails(npyscreen.Form):
         self.build_plan.value = ""
         self.dependency_listing.update_listing()
 
-    def on_ok(self, _input):
+    def on_ok(self):
         self.parentApp.pop()
         if len(self.parentApp.active_resource) != 0:
             self.beforeEditing()
