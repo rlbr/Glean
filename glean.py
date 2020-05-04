@@ -232,6 +232,15 @@ class GleanApp(npyscreen.NPSAppManaged):
     def top(self):
         return self.active_resource[-1]
 
+    def mark_missing_dependencies(self, resource_name):
+        resource = get_resource(resource_name)
+        if resource is None:
+            self.push(resource_name)
+            return
+
+        for dependency in resource._dependencies.keys():
+            self.mark_missing_dependencies(dependency)
+
 
 # @Utils
 
@@ -663,15 +672,6 @@ class ResourceDetails(npyscreen.Form):
         else:
             self.parentApp.switchFormPrevious()
 
-    def mark_missing_dependencies(self, resource_name):
-        resource = get_resource(resource_name)
-        if resource is None:
-            self.parentApp.push(resource_name)
-            return
-
-        for dependency in resource._dependencies.keys():
-            self.mark_missing_dependencies(dependency)
-
     def handle_bom(self, quantity):
         self.parentApp.last_info_command = self.bom_set_command_text
         self.handle_info(quantity)
@@ -697,7 +697,7 @@ class ResourceDetails(npyscreen.Form):
 
     def handle_maybe_missing_resources(self):
         self.parentApp.caller_resource = self.parentApp.top()
-        self.mark_missing_dependencies(self.parentApp.caller_resource)
+        self.parentApp.mark_missing_dependencies(self.parentApp.caller_resource)
         if self.parentApp.top() != self.parentApp.caller_resource:
             self.parentApp.last_resource_object = None
             self.parentApp.switchForm("ADD_QUEUE")
