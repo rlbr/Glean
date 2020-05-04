@@ -338,6 +338,7 @@ class _AddDeleteModifyList(npyscreen.MultiLineAction):
         "quit": "q",
         "search": "s",
         "reset search": "^R",
+        "fill in holes": "^H",
     }
 
     def __init__(self, *args, **kwargs):
@@ -389,7 +390,7 @@ class _FilterableResourceListing(_AddDeleteModifyList):
     def fill_in_holes(self, _input=None):
         for resource in get_resource_list():
             self.pa.mark_missing_dependencies(resource)
-
+        self.pa.last_resource_object = None
         self.pa.switchForm("ADD_QUEUE")
 
 
@@ -627,7 +628,7 @@ class AddResourceQueue(ModifyResource):
                 self.parentApp.push(dependency)
         self.parentApp.save_place = False
         self.parentApp.changed = True
-        if self.caller_resource is not None:
+        if self.parentApp.caller_resource is not None:
             self.parentApp.last_resource_object = Resource(self.parentApp.top(), dict())
             # from details
             if self.parentApp.top() == self.parentApp.caller_resource:
