@@ -224,7 +224,8 @@ class GleanApp(npyscreen.NPSAppManaged):
         self.changed = True
 
     def push(self, resource_name):
-        self.active_resource.append(resource_name)
+        if resource_name not in self.active_resource:
+            self.active_resource.append(resource_name)
 
     def pop(self):
         return self.active_resource.pop()
